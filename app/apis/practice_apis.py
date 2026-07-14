@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, EmailStr, Field, field_validator, StringConstraints
+from fastapi import APIRouter, HTTPException, status 
+from pydantic import BaseModel, EmailStr, Field, field_validator, StringConstraints, Field
 import re
 from typing import Annotated
+
 
 #####################################################
 # 1. 라우터 선언
@@ -47,6 +48,39 @@ class UserResponse(BaseModel):
     age: int
     email: str
 
+# 회원 정보 업데이트 스키마
+class UserUpdateRequest(BaseModel):
+    age: int | None = Field(default=None, ge=14)
+    email: str | None = Field(default=None, max_length=30)
+    password: str | None = Field(default=None, min_length=8, max_length=20)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value):
+        if value is None:
+            return value
+
+        email_pattern = r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+
+        if not re.match(email_pattern, value):
+            raise ValueError("올바른 이메일 형식이 아닙니다.")
+
+        return value
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value):
+        if value is None:
+            return value
+
+        has_upper = re.search(r"[A-Z]", value)
+        has_lower = re.search(r"[a-z]", value)
+        has_special = re.search(r"[^A-Za-z0-9]", value)
+
+        if not has_upper or not has_lower or not has_special:
+            raise ValueError("비밀번호는 대문자, 소문자, 특수문자를 각각 1개 이상 포함해야 합니다.")
+
+        return value
 
 #####################################################
 # 4. API Endpoints 구현
@@ -108,7 +142,19 @@ def add_user(user_data: UserCreate):
 
 
 # task04 - 김지혜
+@router.patch("/users/{user_id}")
+def update_user(user_id: int, user_update: UserUpdateRequest):
+    update_data = user_update.model_dump(exclude_none=True)
 
+    if update_data == {}:
+        raise HTTPException(status_code=400, detail="수정할 항목을 입력해주세요.")
+
+    for user in user_list:
+        if user["id"] == user_id:
+            user.update(update_data)
+            return user
+
+    raise HTTPException(status_code=404, detail="해당 회원을 찾을 수 없습니다.")
 
 
 
