@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field, field_validator, StringConstraints
+import re
+from typing import Annotated
 
 #####################################################
 # 1. 라우터 선언
@@ -65,7 +67,42 @@ class UserResponse(BaseModel):
 
 # task03 - 홍승완
 
+class UserCreate(BaseModel):
+    name: Annotated[str, Field(min_length=2, max_length=10)]
+    age: Annotated[int, Field(ge=14)]
+    email: Annotated[str, Field(max_length=30)]
+    password: Annotated[str, Field(min_length=8, max_length=20)]
 
+    @field_validator("email")
+    @classmethod
+    def validate_email_format(cls, v):
+        # 이메일 형식 정규표현식
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, v):
+            raise ValueError("이메일 형식이 올바르지 않습니다.")
+        # 중복 체크
+        if any(user["email"] == v for user in user_list):
+            raise ValueError("이미 존재하는 이메일입니다.")
+        return v
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_complexity(cls, v):
+        # 대소문자, 특수문자 각 1개 이상 필수
+        if not (re.search(r"[A-Z]", v) and re.search(r"[a-z]", v) and re.search(r"[!@#$%^&*(),.?\":{}|<>]", v)):
+            raise ValueError("비밀번호는 대소문자와 특수문자가 각각 1개 이상 포함되어야 합니다.")
+        return v
+
+def add_user(user_data: UserCreate):
+    new_user = {
+        "id": len(user_list) + 1,
+        "name": user_data.name,
+        "age": user_data.age,
+        "email": user_data.email,
+        "password": user_data.password # 실제 서비스에선 암호화 필수!
+    }
+    user_list.append(new_user)
+    return new_user
 
 
 
