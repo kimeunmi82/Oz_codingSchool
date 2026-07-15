@@ -3,10 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from typing import AsyncGenerator
 from app.core.config import settings
 
-#DATABASE_PREFIX = "mysql+asyncmy://"
-#DATABASE_URI = f"{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
-#DATABASE_URL = f"{DATABASE_PREFIX}{DATABASE_URI}"
-DATABASE_URL = "sqlite+aiosqlite:///./ai_health.db"
+DATABASE_PREFIX = "mysql+asyncmy://"
+DATABASE_URI = f"{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+DATABASE_URL = f"{DATABASE_PREFIX}{DATABASE_URI}"
+#DATABASE_URL = "sqlite+aiosqlite:///./ai_health.db"
 
 
 # 비동기 엔진 생성
