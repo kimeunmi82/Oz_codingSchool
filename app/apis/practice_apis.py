@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Path
-from pydantic import BaseModel, EmailStr, Field, field_validator, StringConstraints, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator, StringConstraints
 import re
 from typing import Annotated
 
@@ -154,9 +154,13 @@ class UserCreate(BaseModel):
     status_code=status.HTTP_201_CREATED
 )
 def create_user_handler(user: UserCreate):
-    # 비즈니스 로직(데이터 추가)
+
+    # ID 자동 증가 로직
+    new_id = max([u["id"] for u in user_list]) + 1 if user_list else 1
+    
     new_user = {
-        "id": max([u["id"] for u in user_list]) + 1 if user_list else 1,
+        "id": new_id,
+
         "name": user.name,
         "age": user.age,
         "email": user.email,
