@@ -3,13 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Boolean, DateTime, Enum as SQLEnum, Integer, String, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import Boolean, DateTime, Enum as SQLEnum, Integer, String, func, text
+from sqlalchemy.orm import  Mapped, mapped_column
 
-
-class Base(DeclarativeBase):
-    pass
-
+from app.core.db.databases import Base
 
 class GenderEnum(str, Enum):
     M = "M"
@@ -75,7 +72,7 @@ class User(Base):
         Boolean,
         nullable=False,
         default=True,
-        server_default="true",        
+        server_default=text("1"),
         comment="계정 활성화 여부",
     )
     created_at: Mapped[datetime] = mapped_column(

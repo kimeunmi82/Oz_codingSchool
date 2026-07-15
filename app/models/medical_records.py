@@ -9,9 +9,9 @@ from app.core.db.databases import Base
 
 # 타입검사 및 자동완성을 위한 import
 if TYPE_CHECKING:
-    from app.models.patient import Patient
-    from app.models.ai_analysis_result import AIAnalysisResult
-    from app.models.xray_image import XrayImage
+    from app.models.patients import Patient
+    from app.models.ai_analysis_results import AIAnalysisResult
+    from app.models.xray_images import XrayImages
 
 
 class MedicalRecord(Base):
@@ -54,7 +54,7 @@ class MedicalRecord(Base):
     )
 
     # x-ray 데이터 조회 가능하도록 x-ray image 테이블과 연결
-    xray_images: Mapped[list["XrayImage"]] = relationship(    # x-ray 이미지는 환자 1명당 여러장 일 수 있어서 type hint에 list로 
+    xray_images: Mapped[list["XrayImages"]] = relationship(    # x-ray 이미지는 환자 1명당 여러장 일 수 있어서 type hint에 list로 
         back_populates="medical_record",
         cascade="all, delete-orphan",
     )

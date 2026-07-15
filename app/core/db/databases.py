@@ -3,15 +3,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from typing import AsyncGenerator
 from app.core.config import settings
 
-#DATABASE_PREFIX = "mysql+asyncmy://"
-#DATABASE_URI = f"{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
-#DATABASE_URL = f"{DATABASE_PREFIX}{DATABASE_URI}"
-DATABASE_URL = "sqlite+aiosqlite:///./ai_health.db"
+DATABASE_PREFIX = "mysql+asyncmy://"
+DATABASE_URI = f"{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+DATABASE_URL = f"{DATABASE_PREFIX}{DATABASE_URI}"
+#DATABASE_URL = "sqlite+aiosqlite:///./ai_health.db"
 
 
 # 비동기 엔진 생성
-#async_engine = create_async_engine(DATABASE_URL, echo=False, future=True)
-async_engine = create_async_engine(DATABASE_URL, echo=False, future=True, connect_args={"check_same_thread": False})
+async_engine = create_async_engine(DATABASE_URL, echo=False, future=True)
+#async_engine = create_async_engine(DATABASE_URL, echo=False, future=True, connect_args={"check_same_thread": False})
 
 # 비동기 세션 팩토리 생성
 AsyncSessionLocal = async_sessionmaker(bind=async_engine, autoflush=False, expire_on_commit=False)
