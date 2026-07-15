@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from starlette.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 from app.apis.practice_apis import add_user, UserCreate, user_list
