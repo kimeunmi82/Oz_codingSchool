@@ -1,1 +1,2 @@
 from .ai_analysis_results import AIAnalysisResult
+from .medical_records import MedicalRecord

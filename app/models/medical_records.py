@@ -10,7 +10,7 @@ from app.core.db.databases import Base
 # 타입검사 및 자동완성을 위한 import
 if TYPE_CHECKING:
     from app.models.patient import Patient
-    from app.models.ai_analysis_result import AIAnalysisResult
+    from app.models.ai_analysis_results import AIAnalysisResult
     from app.models.xray_image import XrayImage
 
 
