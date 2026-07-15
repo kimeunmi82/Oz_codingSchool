@@ -10,7 +10,7 @@ class AIAnalysisResult(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment='기본 키')
     
     # 각 필드별로 note 내용을 comment로 넣어줍니다.
-    #record_id = Column(BigInteger, ForeignKey("medical_records.id"), nullable=False, comment='진료 기록 ID')
+    record_id = Column(BigInteger, ForeignKey("medical_records.id"), nullable=False, comment='진료 기록 ID')
     is_pneumonia = Column(Boolean, nullable=False, comment='폐렴 진단 여부')
     confidence = Column(Numeric(5, 2), nullable=False, comment='AI 예측 확률')
     heatmap_url = Column(String(255), nullable=False, comment='AI 분석 결과 이미지 경로')
