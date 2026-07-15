@@ -13,6 +13,7 @@ sys.path.append(os.getcwd())
 
 from app.core.db.databases import Base, DATABASE_URL
 
+
 target_metadata = Base.metadata
 
 # Model Import
