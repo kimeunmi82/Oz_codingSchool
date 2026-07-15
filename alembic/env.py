@@ -12,7 +12,6 @@ import sys
 sys.path.append(os.getcwd())
 
 from app.core.db.databases import Base, DATABASE_URL
-from app.models.ai_analysis_results import AIAnalysisResult
 
 
 target_metadata = Base.metadata

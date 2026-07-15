@@ -10,8 +10,8 @@ DATABASE_URL = f"{DATABASE_PREFIX}{DATABASE_URI}"
 
 
 # 비동기 엔진 생성
-#async_engine = create_async_engine(DATABASE_URL, echo=False, future=True)
-async_engine = create_async_engine(DATABASE_URL, echo=False, future=True, connect_args={"check_same_thread": False})
+async_engine = create_async_engine(DATABASE_URL, echo=False, future=True)
+#async_engine = create_async_engine(DATABASE_URL, echo=False, future=True, connect_args={"check_same_thread": False})
 
 # 비동기 세션 팩토리 생성
 AsyncSessionLocal = async_sessionmaker(bind=async_engine, autoflush=False, expire_on_commit=False)

@@ -4,13 +4,14 @@ from datetime import datetime
 from enum import Enum
 
 from sqlalchemy import BigInteger, DateTime, Enum as SQLEnum, SmallInteger, String, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import  Mapped, mapped_column, relationship
+from app.core.db.databases import Base
 
+from typing import TYPE_CHECKING
 
-class Base(DeclarativeBase):
-    pass
-
-
+if TYPE_CHECKING:
+    from app.models.medical_records import MedicalRecord
+    
 class GenderEnum(str, Enum):
     M = "M"
     F = "F"
@@ -56,3 +57,9 @@ class Patient(Base):
         onupdate=func.now(),
         comment="환자 정보 수정 일시",
     )
+    
+    # MedicalRecord 테이블과 연결
+    medical_records: Mapped[list["MedicalRecord"]] = relationship(
+    back_populates="patient",
+    cascade="all, delete-orphan",
+)

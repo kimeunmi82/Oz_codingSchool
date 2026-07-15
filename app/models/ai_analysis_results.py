@@ -1,5 +1,7 @@
 from sqlalchemy import BigInteger, ForeignKey, String, Boolean, Numeric
+
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.core.db.databases import Base
 from app.core.db.models import TimestampMixin
 
@@ -15,7 +17,7 @@ class AIAnalysisResult(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, comment='기본 키')
     
     record_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("medical_records.id", ondelete="CASCADE"), 
+        BigInteger, ForeignKey("medical_records.id"), 
         nullable=False, comment='진료 기록 ID'
     )
     
