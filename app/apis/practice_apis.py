@@ -122,7 +122,6 @@ def get_user_id_handler(
 
 
 # task03 - 홍승완
-
 class UserCreate(BaseModel):
     name: Annotated[str, Field(min_length=2, max_length=10)]
     age: Annotated[int, Field(ge=14)]
@@ -149,16 +148,22 @@ class UserCreate(BaseModel):
             raise ValueError("비밀번호는 대소문자와 특수문자가 각각 1개 이상 포함되어야 합니다.")
         return v
 
-def add_user(user_data: UserCreate):
+@router.post(
+    "/users", 
+    summary="회원 추가 API",
+    status_code=status.HTTP_201_CREATED
+)
+def create_user_handler(user: UserCreate):
+    # 비즈니스 로직(데이터 추가)
     new_user = {
-        "id": len(user_list) + 1,
-        "name": user_data.name,
-        "age": user_data.age,
-        "email": user_data.email,
-        "password": user_data.password  # 실제 서비스에선 암호화 필수!
+        "id": max([u["id"] for u in user_list]) + 1 if user_list else 1,
+        "name": user.name,
+        "age": user.age,
+        "email": user.email,
+        "password": user.password
     }
     user_list.append(new_user)
-    return new_user
+    return {"message": "회원가입 성공!", "user": new_user}
 
 
 # task04 - 김지혜
