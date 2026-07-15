@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from starlette.staticfiles import StaticFiles
 from starlette.responses import FileResponse
-from app.apis.practice_apis import add_user, UserCreate, user_list
+from app.apis.practice_apis import UserCreate, user_list
 
 # apis 패키지에서 라우터를 가져옵니다.
 from app.apis.practice_apis import router as practice_router
@@ -56,12 +56,3 @@ async def catch_all(path: str):
 def read_users():
     return user_list
 
-# 2. 회원 추가 API
-@app.post("/practice_api/users")
-def create_user(user: UserCreate):
-    try:
-        new_user = add_user(user)
-        return {"message": "회원가입 성공!", "user": new_user}
-    except ValueError as e:
-        # Pydantic 검증에서 걸리지 않은 비즈니스 로직 에러(이메일 중복 등) 처리
-        raise HTTPException(status_code=400, detail=str(e))
