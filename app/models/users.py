@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Boolean, DateTime, Enum as SQLEnum, Integer, String, func, text
+from sqlalchemy import Boolean, DateTime, Enum as SQLEnum, Integer, String, func, text, Column
 from sqlalchemy.orm import  Mapped, mapped_column
 
 from app.core.db.databases import Base
@@ -87,3 +87,5 @@ class User(Base):
         onupdate=func.now(),
         comment="유저 정보 수정 일시",
     )
+
+

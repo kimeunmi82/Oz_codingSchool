@@ -196,3 +196,4 @@ def delete_user(user_id: int):
             return
 
     raise HTTPException(status_code=404, detail="해당 ID의 회원을 찾을 수 없습니다.")
+

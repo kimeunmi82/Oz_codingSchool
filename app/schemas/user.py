@@ -75,3 +75,9 @@ class UserListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+#5번 권한 변경
+class UserRoleUpdateRequest(BaseModel):
+    role: RoleEnum
+
+
+
