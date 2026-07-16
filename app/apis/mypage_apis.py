@@ -18,6 +18,44 @@ router = APIRouter(prefix="/mypage_api")
 # 2. API Endpoints 구현
 #####################################################
 
+# # 회원탈퇴 API 
+# # 탈퇴는 별도 schema가 없어서 만들지 않았습니다.
+# # 로그인 담당자(은미님)의 get_current_user 인증 의존성이 완성되면 함수를 연결해야 합니다. 우선 주석처리 하겠습니다. 
+ 
+
+# @router.delete(
+#     "/v1/mypage",
+#     status_code=status.HTTP_204_NO_CONTENT,
+#     summary="회원 탈퇴 API",
+#     description="로그인한 사용자의 계정을 비활성화합니다.",
+# )
+# async def delete_my_account(
+#     response: Response,
+#     current_user: User = Depends(get_current_user),
+#     db: AsyncSession = Depends(async_get_db),
+# ):
+#     if not current_user.is_active:
+#         raise HTTPException(
+#             status_code=status.HTTP_409_CONFLICT,
+#             detail="이미 탈퇴한 사용자입니다.",
+#         )
+
+#     # 사용자를 DB에서 삭제하지 않고 비활성화
+#     current_user.is_active = False
+
+#     await db.commit()
+
+#     # 브라우저의 Refresh Token 쿠키 삭제
+#     response.delete_cookie(
+#         key="refresh_token",
+#         path="/",
+#         secure=True,
+#         httponly=True,
+#         samesite="lax",
+#     )
+
+#     response.status_code = status.HTTP_204_NO_CONTENT
+#     return response
 
 
 
