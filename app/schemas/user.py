@@ -62,7 +62,7 @@ class UserCreateResponse(BaseModel):
 
 
 
-# 회원 정보 조회 스키마
+# 회원 정보 조회 스키마 - 정보 조회에 필요없는 항목 제거 
 class UserListItem(BaseModel):
     id: int
     email: str | None
@@ -70,10 +70,7 @@ class UserListItem(BaseModel):
     phone_number: str | None
     gender: GenderEnum
     department: DepartmentEnum
-    role: RoleEnum
     is_active: bool
-    created_at: datetime
-    updated_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)
 
