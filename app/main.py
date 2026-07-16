@@ -8,11 +8,17 @@ from app.apis.practice_apis import UserCreate, user_list
 
 # apis 패키지에서 라우터를 가져옵니다.
 from app.apis.practice_apis import router as practice_router
+from app.apis.user_apis import router as user_router
+from app.apis.mypage_apis import router as mypage_router
+from app.apis.login_apis import router as login_router
 
 app = FastAPI()
 
 # 라우터 등록
 app.include_router(practice_router)
+app.include_router(user_router)
+app.include_router(mypage_router)
+app.include_router(login_router)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
