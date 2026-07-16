@@ -144,8 +144,47 @@ input, textarea, select {
 input:focus, textarea:focus, select:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);}
+
+    .password-input-wrapper {
+    position: relative;
+    width: 100%;
 }
+
+    .password-input-wrapper input {
+    box-sizing: border-box;
+    width: 100%;
+    padding-right: 5rem;
+}
+
+    .password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0.5rem;
+
+    transform: translateY(-50%);
+
+    padding: 0.35rem 0.5rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+
+    background-color: transparent;
+    color: #555;
+
+    font-size: 0.82rem;
+    line-height: 1;
+}
+
+    .password-toggle:hover {
+    background-color: #f0f4f8;
+    opacity: 1;
+}
+
+    .password-toggle:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 1px;
+}
+
 
 select {
     cursor: pointer;

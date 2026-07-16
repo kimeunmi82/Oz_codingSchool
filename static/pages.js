@@ -20,19 +20,29 @@ const pages = {
     },
 
     async renderLogin() {
-        const html = await utils.loadTemplate('login');
-        document.getElementById('app').innerHTML = html;
+    const html = await utils.loadTemplate('login');
+    const app = document.getElementById('app');
+
+    app.innerHTML = html;
+    utils.initPasswordToggles(app);
     },
 
     async renderSignup() {
-        const html = await utils.loadTemplate('signup');
-        document.getElementById('app').innerHTML = html;
-        
-        const phoneInput = document.getElementById('signup-phone');
-        if (phoneInput) {
-            phoneInput.addEventListener('input', (e) => utils.handlePhoneInput(e));
-        }
-    },
+    const html = await utils.loadTemplate('signup');
+    const app = document.getElementById('app');
+
+    app.innerHTML = html;
+    utils.initPasswordToggles(app);
+
+    const phoneInput = document.getElementById('signup-phone');
+
+    if (phoneInput) {
+        phoneInput.addEventListener(
+            'input',
+            (e) => utils.handlePhoneInput(e)
+        );
+    }
+},
 
     async renderPatients(params = {}) {
         const patients = await apis.getPatients(params);
@@ -189,9 +199,13 @@ const pages = {
     },
 
     async renderMyPage() {
-        const html = await utils.loadTemplate('my-page');
-        const app = document.getElementById('app');
-        app.innerHTML = html;
+    const html = await utils.loadTemplate('my-page');
+    const app = document.getElementById('app');
+
+    app.innerHTML = html;
+    utils.initPasswordToggles(app);
+
+    // 기존 현재 사용자 정보 표시 코드...
 
         // 현재 사용자 정보 표시
         document.getElementById('me-email').innerText = state.user.email;
@@ -309,9 +323,11 @@ const pages = {
         };
 
         try {
-            await apis.updatePassword(data);
-            utils.showAlert('비밀번호가 변경되었습니다.', 'success');
-            e.target.reset();
+        await apis.updatePassword(data);
+        utils.showAlert('비밀번호가 변경되었습니다.', 'success');
+
+        e.target.reset();
+        utils.resetPasswordToggles(e.target);
         } catch (err) {
             let msg = err.message;
             if (err.status === 400) {
