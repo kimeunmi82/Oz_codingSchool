@@ -20,6 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db.databases import async_get_db
 from app.models.users import User
 
+from app.core.security import verify_password
+
+from app.core.config import settings
+
 #####################################################
 # 1. 라우터 선언
 #####################################################
@@ -31,9 +35,13 @@ router = APIRouter(prefix="/auth_api", tags=["auth"])
 # Bearer 토큰 보안 스키마 정의
 security = HTTPBearer()
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret-key-change-me")
-ACCESS_TOKEN_EXPIRE_MINUTES = 30     # 액세스 토큰 만료주기           
-REFRESH_TOKEN_EXPIRE_DAYS = 7        # 리프레시 토큰 만료주기
+SECRET_KEY = settings.JWT_SECRET_KEY
+ACCESS_TOKEN_EXPIRE_MINUTES = (
+    settings.ACCESS_TOKEN_EXPIRE_MINUTES
+)    # 액세스 토큰 만료주기           
+REFRESH_TOKEN_EXPIRE_DAYS = (
+    settings.REFRESH_TOKEN_EXPIRE_DAYS
+)       # 리프레시 토큰 만료주기
 
 
 def _base64url_encode(data: bytes) -> str:
@@ -70,7 +78,7 @@ def decode_jwt(
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="invalid_detail",
+            detail= invalid_detail,
         ) from exc
 
     signing_input = f"{encoded_header}.{encoded_payload}".encode("utf-8")
@@ -84,7 +92,7 @@ def decode_jwt(
     if not hmac.compare_digest(expected_signature, provided_signature):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="invalid_detail",
+            detail= invalid_detail,
         )
 
     try:
@@ -92,21 +100,21 @@ def decode_jwt(
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="invalid_detail",
+            detail= invalid_detail,
         ) from exc
 
     exp = payload.get("exp")
     if not isinstance(exp, int):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="invalid_detail",
+            detail= invalid_detail,
         )
 
     now_timestamp = int(datetime.now(timezone.utc).timestamp())
     if exp < now_timestamp:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="expired_refresh_token",
+            detail= expired_detail,
         )
 
     return payload
@@ -133,6 +141,35 @@ def create_refresh_token(user_id: int) -> str:
     }
     return _create_jwt(payload)
 
+# 현재 로그인 사용자 ID 반환
+def get_current_user_id(
+    credentials: HTTPAuthorizationCredentials = Depends(
+        security
+    ),
+) -> int:
+    token = credentials.credentials
+
+    payload = decode_jwt(
+        token,
+        invalid_detail="invalid_token",
+        expired_detail="expired_token",
+    )
+
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_token",
+        )
+
+    user_id = payload.get("user_id")
+
+    if not isinstance(user_id, int):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_token",
+        )
+
+    return user_id
 # 로그인
 @router.post("/v1/auth/login/", response_model=LoginResponse, status_code=status.HTTP_200_OK)
 async def login(
@@ -141,24 +178,35 @@ async def login(
     db: AsyncSession = Depends(async_get_db)
 ) -> LoginResponse:
     email = body.email.strip()
-    password = body.password.strip()
 
-    if not email or not password:
+    if not email or not body.password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="empty_fields",
         )
     
-    stmt = select(User).where((User.email == email) & (User.hashed_password == password))
+    stmt = select(User).where(User.email == email)
     result = await db.execute(stmt)
-    user = result.scalar()
+    user = result.scalar_one_or_none()
     
-    if user is None:
+    if (
+    user is None
+    or user.hashed_password is None
+    or not verify_password(
+        body.password,
+        user.hashed_password,
+    )
+):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="이메일 또는 비밀번호가 일치하지 않습니다."
         )
-    
+        
+    if not user.is_active:
+        raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="비활성화된 계정입니다.",
+    )
     access_token = create_access_token(user_id = user.id)
     refresh_token = create_refresh_token(user_id = user.id)
     
@@ -247,7 +295,6 @@ async def logout(
         invalid_detail="invalid_token",
         expired_detail="expired_token",
     )
-    print("decoded payload:", payload)
 
     if payload.get("type") != "access":
         raise HTTPException(
