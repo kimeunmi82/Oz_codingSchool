@@ -10,7 +10,7 @@ from app.apis.practice_apis import UserCreate, user_list
 from app.apis.practice_apis import router as practice_router
 from app.apis.user_apis import router as user_router
 from app.apis.mypage_apis import router as mypage_router
-from app.apis.login_apis import router as login_router
+from app.apis.auth_apis import router as auth_router
 
 app = FastAPI()
 
@@ -18,7 +18,7 @@ app = FastAPI()
 app.include_router(practice_router)
 app.include_router(user_router)
 app.include_router(mypage_router)
-app.include_router(login_router)
+app.include_router(auth_router)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
