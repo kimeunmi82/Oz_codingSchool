@@ -1,7 +1,8 @@
 
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from pwdlib import PasswordHash
+
+from app.core.security import hash_password
 
 from sqlalchemy import or_, select
 
@@ -28,10 +29,6 @@ router = APIRouter(prefix="/user_api")
 # 2. API Endpoints 구현
 #####################################################
 # 회원 가입
-
-password_hash = PasswordHash.recommended()
-
-
 @router.post(
     "/v1/users",
     response_model=UserCreateResponse,
@@ -66,7 +63,7 @@ async def create_user(
 
     new_user = User(
         email=body.email,
-        hashed_password=password_hash.hash(body.password),
+        hashed_password=hash_password(body.password),
         name=body.name,
         department=body.department,
         gender=body.gender,
