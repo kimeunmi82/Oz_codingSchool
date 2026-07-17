@@ -2,12 +2,15 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 
-from app.core.security import hash_password
+from app.core.security import hash_password_async
 
 from sqlalchemy import or_, select
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import (
+    IntegrityError,
+    SQLAlchemyError,
+)
 
 from app.core.db.databases import async_get_db
 from app.models.users import User, RoleEnum, DepartmentEnum
@@ -18,12 +21,12 @@ from app.schemas.user import (
     UserRoleUpdateRequest
 )
 
-
+from sqlalchemy.orm import load_only
 
 #####################################################
 # 1. 라우터 선언
 #####################################################
-router = APIRouter(prefix="/user_api")
+router = APIRouter(prefix="/user_api", tags=["user"])
 
 #####################################################
 # 2. API Endpoints 구현
@@ -63,7 +66,7 @@ async def create_user(
 
     new_user = User(
         email=body.email,
-        hashed_password=hash_password(body.password),
+        hashed_password=await hash_password_async(body.password),
         name=body.name,
         department=body.department,
         gender=body.gender,
@@ -111,9 +114,31 @@ async def get_user_list(
         default=None,
         description='부서 필터: RESEARCH, MEDICAL, DEV',
     ),
+    page: int = Query(
+    default=1,
+    ge=1,
+    description="페이지 번호",
+),
+    page_size: int = Query(
+    default=20,
+    ge=1,
+    le=100,
+    description="페이지당 사용자 수",
+),
     db: AsyncSession = Depends(async_get_db),
 ):
-    stmt = select(User)
+    stmt = select(User).options(
+        load_only(
+            User.id,
+            User.email,
+            User.name,
+            User.phone_number,
+            User.gender,
+            User.department,
+            User.is_active,
+            raiseload=True,
+        )
+    )
 
     # 이메일 또는 이름 검색
     if query:
@@ -130,7 +155,14 @@ async def get_user_list(
     if department:
         stmt = stmt.where(User.department == department)
 
-    stmt = stmt.order_by(User.id.desc())
+    offset = (page - 1) * page_size
+
+    stmt = (
+        stmt
+        .order_by(User.id.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
 
     result = await db.execute(stmt)
     users = result.scalars().all()
@@ -140,19 +172,44 @@ async def get_user_list(
 # 5. 회원 권한 변경
 @router.patch("/v1/users/{user_id}/role")
 async def update_user_role(
-    user_id: int, 
-    data: UserRoleUpdateRequest, 
+    user_id: int,
+    data: UserRoleUpdateRequest,
     db: AsyncSession = Depends(async_get_db)
 ):
-    stmt = select(User).where(User.id == user_id)
+    stmt = (
+        select(User)
+        .options(
+            load_only(
+                User.id,
+                User.role,
+                raiseload=True,
+            )
+        )
+        .where(User.id == user_id)
+    )
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
-    
-    if not user:
-        raise HTTPException(status_code=404, detail="해당 사용자를 찾을 수 없습니다.")
-    
-    # 권한 업데이트
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 사용자를 찾을 수 없습니다.",
+        )
+
     user.role = data.role
-    await db.commit()
-    
-    return {"message": "사용자 권한이 성공적으로 변경되었습니다."}
+
+    try:
+        await db.commit()
+    except SQLAlchemyError as error:
+        await db.rollback()
+
+        raise HTTPException(
+            status_code=(
+                status.HTTP_500_INTERNAL_SERVER_ERROR
+            ),
+            detail="사용자 권한 변경 중 오류가 발생했습니다.",
+        ) from error
+
+    return {
+        "message": "사용자 권한이 성공적으로 변경되었습니다."
+    }

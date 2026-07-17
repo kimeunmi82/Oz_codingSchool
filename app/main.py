@@ -11,8 +11,12 @@ from app.apis.practice_apis import router as practice_router
 from app.apis.user_apis import router as user_router
 from app.apis.mypage_apis import router as mypage_router
 from app.apis.auth_apis import router as auth_router
+# API 성능 측정
+from app.core.performance import log_api_performance
 
 app = FastAPI()
+
+app.middleware("http")(log_api_performance) #미들웨어 등록 및 API 처리 시간 측정
 
 # 라우터 등록
 app.include_router(practice_router)
@@ -56,9 +60,3 @@ async def catch_all(path: str):
 
         raise HTTPException(status_code=404)
     return FileResponse(BASE_DIR / "static" / "index.html")
-
-# 1. 전체 유저 목록 확인 (확인용)
-@app.get("/users")
-def read_users():
-    return user_list
-
