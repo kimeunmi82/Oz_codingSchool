@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db.databases import async_get_db
 from app.models.users import User
 
-from app.core.security import verify_password
+from app.core.security import verify_password_async
 
 from app.core.config import settings
 
@@ -38,7 +38,7 @@ security = HTTPBearer()
 SECRET_KEY = settings.JWT_SECRET_KEY
 ACCESS_TOKEN_EXPIRE_MINUTES = (
     settings.ACCESS_TOKEN_EXPIRE_MINUTES
-)    # 액세스 토큰 만료주기           
+)    # 액세스 토큰 만료주기
 REFRESH_TOKEN_EXPIRE_DAYS = (
     settings.REFRESH_TOKEN_EXPIRE_DAYS
 )       # 리프레시 토큰 만료주기
@@ -173,7 +173,7 @@ def get_current_user_id(
 # 로그인
 @router.post("/v1/auth/login/", response_model=LoginResponse, status_code=status.HTTP_200_OK)
 async def login(
-    body: LoginRequest, 
+    body: LoginRequest,
     response: Response,
     db: AsyncSession = Depends(async_get_db)
 ) -> LoginResponse:
@@ -184,24 +184,31 @@ async def login(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="empty_fields",
         )
-    
+
     stmt = select(User).where(User.email == email)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
-    
+
+    password_matches = False
     if (
-    user is None
-    or user.hashed_password is None
-    or not verify_password(
-        body.password,
-        user.hashed_password,
-    )
-):
+    user is not None
+    and user.hashed_password is not None
+    ):
+        password_matches = await verify_password_async(
+            body.password,
+            user.hashed_password,
+        )
+
+    if (
+        user is None
+        or user.hashed_password is None
+        or not password_matches
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="이메일 또는 비밀번호가 일치하지 않습니다."
         )
-        
+
     if not user.is_active:
         raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -209,7 +216,7 @@ async def login(
     )
     access_token = create_access_token(user_id = user.id)
     refresh_token = create_refresh_token(user_id = user.id)
-    
+
     # refresh token - 쿠키로 저장
     response.set_cookie(
         key="refresh_token",
@@ -228,8 +235,8 @@ async def login(
             username=user.name,
         ),
     )
-  
-# 인증/인가   
+
+# 인증/인가
 @router.post(
     "/v1/auth/refresh/",
     response_model=RefreshTokenResponse,
@@ -283,7 +290,7 @@ async def logout(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> MessageResponse:
     access_token = credentials.credentials.strip()
-    
+
     if not access_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -13,7 +13,7 @@ from app.core.db.databases import async_get_db
 from app.models.users import User
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
-from app.core.security import hash_password, verify_password
+from app.core.security import (hash_password_async, verify_password_async,)
 
 from app.apis.auth_apis import get_current_user_id
 
@@ -21,7 +21,7 @@ from app.apis.auth_apis import get_current_user_id
 #####################################################
 # 1. 라우터 선언
 #####################################################
-router = APIRouter(prefix="/mypage_api")
+router = APIRouter(prefix="/mypage_api", tags=["mypage"])
 
 #####################################################
 # 2. API Endpoints 구현
@@ -47,27 +47,39 @@ async def get_my_page(
     return user
 
 # 7. 회원 정보 수정
-@router.patch("/v1/users/me", response_model=MyPageResponse)
-async def update_my_info(data: MyPageUpdateRequest,    authenticated_user_id: int = Depends(
+@router.patch("/v1/users/me", response_model=MyPageResponse,)
+async def update_my_info(data: MyPageUpdateRequest, authenticated_user_id: int = Depends(
         get_current_user_id
     ),
     db: AsyncSession = Depends(async_get_db),
 ):
 
-    statement = (
-        select(User)
-        .where(User.id == authenticated_user_id)
-    )
+    statement = select(User).where(User.id == authenticated_user_id)
     
     result = await db.execute(statement)
     current_user = result.scalar_one_or_none()
+        
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자 정보를 찾을 수 없습니다.",
+        )   
     
-    
-    for key, value in data.model_dump(exclude_unset=True).items():
+    for key, value in data.model_dump(
+        exclude_unset=True
+    ).items():
         setattr(current_user, key, value)
     
-    await db.commit()
-    await db.refresh(current_user)
+    try:
+        await db.commit()
+    except SQLAlchemyError as error:
+        await db.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="회원 정보 수정 중 오류가 발생했습니다.",
+        ) from error
+
     return current_user
 
 # 비밀번호 변경
@@ -121,10 +133,14 @@ async def change_my_password(
             },
         )
 
-    if not verify_password(
-        body.current_password,
-        current_user.hashed_password,
-    ):
+    is_current_password_valid = (
+        await verify_password_async(
+            body.current_password,
+            current_user.hashed_password,
+        )
+    )  
+
+    if not is_current_password_valid:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
@@ -133,21 +149,11 @@ async def change_my_password(
             },
         )
 
-    if verify_password(
-        body.new_password,
-        current_user.hashed_password,
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "SAME_AS_CURRENT_PASSWORD",
-                "message": "새 비밀번호는 현재 비밀번호와 달라야 합니다.",
-            },
-        )
-
-    current_user.hashed_password = hash_password(
-        body.new_password
+    new_hashed_password = await hash_password_async(
+    body.new_password
     )
+    
+    current_user.hashed_password = new_hashed_password
 
     try:
         await db.commit()

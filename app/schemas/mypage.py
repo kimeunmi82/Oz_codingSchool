@@ -85,6 +85,8 @@ class PasswordChangeRequest(BaseModel):
 
         return value
 
+ # current_password validator
+ # new_password validator
     @model_validator(mode="after")
     def validate_different_passwords(self):
         if self.current_password == self.new_password:
