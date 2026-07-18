@@ -2,11 +2,11 @@ import base64
 import hashlib
 import hmac
 import json
-import os
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from app.core.decorators import enforce_timeout
 
 from app.schemas.auth import (
     LoginRequest,
@@ -35,15 +35,6 @@ router = APIRouter(prefix="/auth_api", tags=["auth"])
 # Bearer 토큰 보안 스키마 정의
 security = HTTPBearer()
 
-SECRET_KEY = settings.JWT_SECRET_KEY
-ACCESS_TOKEN_EXPIRE_MINUTES = (
-    settings.ACCESS_TOKEN_EXPIRE_MINUTES
-)    # 액세스 토큰 만료주기
-REFRESH_TOKEN_EXPIRE_DAYS = (
-    settings.REFRESH_TOKEN_EXPIRE_DAYS
-)       # 리프레시 토큰 만료주기
-
-
 def _base64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("utf-8")
 
@@ -61,7 +52,7 @@ def _create_jwt(payload: dict) -> str:
     )
     signing_input = f"{encoded_header}.{encoded_payload}".encode("utf-8")
     signature = hmac.new(
-        SECRET_KEY.encode("utf-8"),
+        settings.JWT_SECRET_KEY.encode("utf-8"),
         signing_input,
         hashlib.sha256,
     ).digest()
@@ -83,7 +74,7 @@ def decode_jwt(
 
     signing_input = f"{encoded_header}.{encoded_payload}".encode("utf-8")
     expected_signature = hmac.new(
-        SECRET_KEY.encode("utf-8"),
+        settings.JWT_SECRET_KEY.encode("utf-8"),
         signing_input,
         hashlib.sha256,
     ).digest()
@@ -126,7 +117,7 @@ def create_access_token(user_id: int) -> str:
         "user_id": user_id,
         "type": "access",
         "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)).timestamp()),
+        "exp": int((now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)).timestamp()),
     }
     return _create_jwt(payload)
 
@@ -137,7 +128,7 @@ def create_refresh_token(user_id: int) -> str:
         "user_id": user_id,
         "type": "refresh",
         "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)).timestamp()),
+        "exp": int((now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)).timestamp()),
     }
     return _create_jwt(payload)
 
@@ -170,8 +161,10 @@ def get_current_user_id(
         )
 
     return user_id
+
 # 로그인
 @router.post("/v1/auth/login/", response_model=LoginResponse, status_code=status.HTTP_200_OK)
+@enforce_timeout(3.0)
 async def login(
     body: LoginRequest,
     response: Response,
@@ -190,30 +183,24 @@ async def login(
     user = result.scalar_one_or_none()
 
     password_matches = False
-    if (
-    user is not None
-    and user.hashed_password is not None
-    ):
+    if user is not None and user.hashed_password is not None:
         password_matches = await verify_password_async(
             body.password,
             user.hashed_password,
         )
 
-    if (
-        user is None
-        or user.hashed_password is None
-        or not password_matches
-    ):
+    if user is None or user.hashed_password is None or not password_matches:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="이메일 또는 비밀번호가 일치하지 않습니다."
+            detail="이메일 또는 비밀번호가 일치하지 않습니다.",
         )
 
     if not user.is_active:
         raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="비활성화된 계정입니다.",
-    )
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="비활성화된 계정입니다.",
+        )
+        
     access_token = create_access_token(user_id = user.id)
     refresh_token = create_refresh_token(user_id = user.id)
 
@@ -222,7 +209,7 @@ async def login(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        max_age=60 * 60 * 24 * 7,
+        max_age=60 * 60 * 24 * settings.REFRESH_TOKEN_EXPIRE_DAYS,
         samesite="lax",
     )
 
@@ -233,6 +220,8 @@ async def login(
             id=user.id,
             email=user.email,
             username=user.name,
+            department=user.department,
+            role=user.role,
         ),
     )
 

@@ -1,17 +1,11 @@
-
-
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-
 from app.core.security import hash_password_async
-
 from sqlalchemy import or_, select
-
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import (
     IntegrityError,
     SQLAlchemyError,
 )
-
 from app.core.db.databases import async_get_db
 from app.models.users import User, RoleEnum, DepartmentEnum
 from app.schemas.user import (
@@ -22,15 +16,23 @@ from app.schemas.user import (
 )
 
 from sqlalchemy.orm import load_only
+from app.core.timeout import TimeoutRoute
+from app.core.authorization import require_permissions
+
 
 #####################################################
 # 1. 라우터 선언
 #####################################################
-router = APIRouter(prefix="/user_api", tags=["user"])
+router = APIRouter(
+    prefix="/user_api", 
+    tags=["user"],
+    route_class=TimeoutRoute,
+)
 
 #####################################################
 # 2. API Endpoints 구현
 #####################################################
+
 # 회원 가입
 @router.post(
     "/v1/users",
@@ -91,10 +93,7 @@ async def create_user(
     return new_user
 
 
-
-
 # 회원 목록 조회
-
 @router.get(
         "/v1/users",
         response_model=list[UserListItem],
@@ -115,17 +114,22 @@ async def get_user_list(
         description='부서 필터: RESEARCH, MEDICAL, DEV',
     ),
     page: int = Query(
-    default=1,
-    ge=1,
-    description="페이지 번호",
-),
+        default=1,
+        ge=1,
+        description="페이지 번호",
+    ),
     page_size: int = Query(
-    default=20,
-    ge=1,
-    le=100,
-    description="페이지당 사용자 수",
-),
+        default=20,
+        ge=1,
+        le=100,
+        description="페이지당 사용자 수",
+    ),
     db: AsyncSession = Depends(async_get_db),
+    current_user: User = Depends(
+        require_permissions(
+            allowed_roles=(RoleEnum.ADMIN,),
+        )
+    ),
 ):
     stmt = select(User).options(
         load_only(
