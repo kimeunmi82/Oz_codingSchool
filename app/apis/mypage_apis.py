@@ -1,7 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Path, Depends
-from pydantic import BaseModel, EmailStr, Field, field_validator, StringConstraints
-import re
-from typing import Annotated
+from fastapi import APIRouter, HTTPException, status, Depends
 from app.schemas.mypage import (
     MyPageResponse, 
     MyPageUpdateRequest, 
@@ -16,19 +13,21 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.security import (hash_password_async, verify_password_async,)
 
 from app.apis.auth_apis import get_current_user_id
+from app.core.timeout import TimeoutRoute
 
 
 #####################################################
 # 1. 라우터 선언
 #####################################################
-router = APIRouter(prefix="/mypage_api", tags=["mypage"])
+router = APIRouter(
+    prefix="/mypage_api", 
+    tags=["mypage"],
+    route_class=TimeoutRoute,
+)
 
 #####################################################
 # 2. API Endpoints 구현
 #####################################################
-
-
-
 
 # 6. 마이페이지 조회
 @router.get("/v1/users/me", response_model=MyPageResponse)
@@ -83,7 +82,6 @@ async def update_my_info(data: MyPageUpdateRequest, authenticated_user_id: int =
     return current_user
 
 # 비밀번호 변경
-
 @router.patch(
     "/v1/users/me/password/",
     response_model=PasswordChangeResponse,

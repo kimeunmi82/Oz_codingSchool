@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
+from app.models.users import DepartmentEnum, RoleEnum
 
 
 class LoginRequest(BaseModel):
@@ -9,6 +10,8 @@ class UserResponse(BaseModel):
     id: int
     email: EmailStr
     username: str
+    department: DepartmentEnum
+    role: RoleEnum
 
 class LoginResponse(BaseModel):
     access_token: str
