@@ -96,7 +96,7 @@ async def delete_my_account(
         key="refresh_token",
         path="/",
     )
-
+    response.status_code = status.HTTP_204_NO_CONTENT
     return response
 
 
