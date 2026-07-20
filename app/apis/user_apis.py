@@ -178,7 +178,8 @@ async def get_user_list(
 async def update_user_role(
     user_id: int,
     data: UserRoleUpdateRequest,
-    db: AsyncSession = Depends(async_get_db)
+    db: AsyncSession = Depends(async_get_db),
+    current_user: User = Depends(require_permissions(allowed_roles=(RoleEnum.ADMIN,)))
 ):
     stmt = (
         select(User)
