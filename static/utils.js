@@ -57,7 +57,89 @@ const utils = {
         e.target.value = formattedValue;
     },
 
+    initPasswordToggles(container = document) {
+    const toggleButtons = container.querySelectorAll(
+        '.password-toggle'
+    );
+
+    toggleButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const targetId = button.dataset.passwordTarget;
+            const input = document.getElementById(targetId);
+
+            if (!input) return;
+
+            // 표시 상태를 변경해도 선택 영역과 커서 위치를 유지
+            const selectionStart = input.selectionStart;
+            const selectionEnd = input.selectionEnd;
+            const selectionDirection = input.selectionDirection;
+
+            const willShow = input.type === 'password';
+
+            input.type = willShow ? 'text' : 'password';
+
+            const currentLabel =
+                button.getAttribute('aria-label') || '비밀번호 보기';
+
+            const fieldName = currentLabel.replace(
+                /\s+(보기|숨기기)$/,
+                ''
+            );
+
+            button.textContent = willShow ? '숨기기' : '보기';
+            button.setAttribute(
+                'aria-label',
+                `${fieldName} ${willShow ? '숨기기' : '보기'}`
+            );
+            button.setAttribute(
+                'aria-pressed',
+                String(willShow)
+            );
+
+            if (
+                selectionStart !== null &&
+                selectionEnd !== null
+            ) {
+                input.setSelectionRange(
+                    selectionStart,
+                    selectionEnd,
+                    selectionDirection || 'none'
+                );
+            }
+        });
+    });
+},
+
     templatesCache: {},
+
+    resetPasswordToggles(container = document) {
+    const toggleButtons = container.querySelectorAll(
+        '.password-toggle'
+    );
+
+    toggleButtons.forEach((button) => {
+        const targetId = button.dataset.passwordTarget;
+        const input = document.getElementById(targetId);
+
+        if (!input) return;
+
+        const currentLabel =
+            button.getAttribute('aria-label') || '비밀번호 보기';
+
+        const fieldName = currentLabel.replace(
+            /\s+(보기|숨기기)$/,
+            ''
+        );
+
+        input.type = 'password';
+        button.textContent = '보기';
+        button.setAttribute('aria-pressed', 'false');
+        button.setAttribute(
+            'aria-label',
+            `${fieldName} 보기`
+        );
+    });
+},
 
     async loadTemplate(name) {
         if (this.templatesCache[name]) return this.templatesCache[name];

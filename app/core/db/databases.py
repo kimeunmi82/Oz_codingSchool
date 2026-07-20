@@ -8,8 +8,16 @@ DATABASE_URI = f"{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{s
 DATABASE_URL = f"{DATABASE_PREFIX}{DATABASE_URI}"
 
 
-# 비동기 엔진 생성
-async_engine = create_async_engine(DATABASE_URL, echo=True, future=True)
+# 비동기 엔진 생성 # future=True는 SQLAlchemy 2.0에서는 기본 동작이므로 제거
+async_engine = create_async_engine(
+    DATABASE_URL,
+    echo=settings.DB_ECHO,
+    pool_pre_ping=True,
+    pool_size=settings.DB_POOL_SIZE,
+    max_overflow=settings.DB_MAX_OVERFLOW,
+    pool_timeout=settings.DB_POOL_TIMEOUT,
+    pool_recycle=settings.DB_POOL_RECYCLE,
+)
 #async_engine = create_async_engine(DATABASE_URL, echo=False, future=True, connect_args={"check_same_thread": False})
 
 # 비동기 세션 팩토리 생성
