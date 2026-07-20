@@ -104,13 +104,18 @@ async def delete_my_account(
 
 
 # 6. 마이페이지 조회
-@router.get("/v1/users/me", response_model=MyPageResponse)
+@router.get("/v1/users/me", response_model=MyPageResponse,)
 async def get_my_page(
     authenticated_user_id: int = Depends(
         get_current_user_id
     ),
     db: AsyncSession = Depends(async_get_db),
-    current_user: User = Depends(require_permissions(allowed_roles=(RoleEnum.USER, RoleEnum.ADMIN))),
+    current_user: User = Depends(
+        require_permissions(
+            allowed_roles=(
+                RoleEnum.STAFF,),
+        )
+    ),
 ):
     statement = (
         select(User)
