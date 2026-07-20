@@ -162,6 +162,31 @@ def get_current_user_id(
 
     return user_id
 
+# 엑세스 토큰에서 사용자 정보 꺼내오기
+def get_current_access_token_payload(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> dict:
+    access_token = credentials.credentials.strip()
+    if not access_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_token",
+        )
+
+    payload = decode_jwt(
+        access_token,
+        invalid_detail="invalid_token",
+        expired_detail="expired_token",
+    )
+
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid_token",
+        )
+
+    return payload
+
 # 로그인
 @router.post("/v1/auth/login/", response_model=LoginResponse, status_code=status.HTTP_200_OK)
 @enforce_timeout(3.0)

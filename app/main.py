@@ -11,6 +11,9 @@ from app.apis.practice_apis import router as practice_router
 from app.apis.user_apis import router as user_router
 from app.apis.mypage_apis import router as mypage_router
 from app.apis.auth_apis import router as auth_router
+from app.apis.patient_apis import router as patient_router
+from app.apis.record_api import router as record_router
+
 # API 성능 측정
 from app.core.performance import log_api_performance
 
@@ -23,6 +26,8 @@ app.include_router(practice_router)
 app.include_router(user_router)
 app.include_router(mypage_router)
 app.include_router(auth_router)
+app.include_router(patient_router)
+app.include_router(record_router)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
