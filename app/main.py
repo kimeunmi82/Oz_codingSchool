@@ -11,6 +11,7 @@ from app.apis.practice_apis import router as practice_router
 from app.apis.user_apis import router as user_router
 from app.apis.mypage_apis import router as mypage_router
 from app.apis.auth_apis import router as auth_router
+from app.apis import record_api
 # API 성능 측정
 from app.core.performance import log_api_performance
 
@@ -23,6 +24,7 @@ app.include_router(practice_router)
 app.include_router(user_router)
 app.include_router(mypage_router)
 app.include_router(auth_router)
+app.include_router(record_api.router)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -53,6 +55,7 @@ async def catch_all(path: str):
     # API나 정적 파일 경로는 제외 (FastAPI가 먼저 매칭하지 못한 경우에만 실행됨)
     if (
         path.startswith("api/v1")
+        or path.startswith("record_api")
         or path.startswith("static/")
         or path.startswith("media/")
     ):
@@ -60,3 +63,6 @@ async def catch_all(path: str):
 
         raise HTTPException(status_code=404)
     return FileResponse(BASE_DIR / "static" / "index.html")
+
+
+
