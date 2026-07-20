@@ -36,6 +36,8 @@ from app.core.security import (hash_password_async, verify_password_async,)
 from app.apis.auth_apis import get_current_user_id
 from app.core.timeout import TimeoutRoute
 
+from app.core.authorization import require_permissions
+from app.models.users import RoleEnum
 
 #####################################################
 # 1. 라우터 선언
@@ -108,6 +110,7 @@ async def get_my_page(
         get_current_user_id
     ),
     db: AsyncSession = Depends(async_get_db),
+    current_user: User = Depends(require_permissions(allowed_roles=(RoleEnum.USER, RoleEnum.ADMIN))),
 ):
     statement = (
         select(User)
