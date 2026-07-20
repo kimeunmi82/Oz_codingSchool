@@ -47,3 +47,11 @@ class PatientResponse(BaseModel):
     phone_number: str
     created_at: datetime
     updated_at: datetime | None
+
+
+# 환자 상세 정보 조회 응답
+class PatientDetailResponse(BaseModel):
+    name: str
+    gender: PatientGender
+    phone_number: str
+    age: int

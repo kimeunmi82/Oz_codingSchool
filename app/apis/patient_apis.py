@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import (
@@ -20,6 +20,7 @@ from app.schemas.patient import (
     PatientCreate,
     PatientGender,
     PatientResponse,
+    PatientDetailResponse,
 )
 #####################################################
 # 1. 라우터 선언
@@ -224,3 +225,65 @@ async def get_patient_list(
         )
         for patient in patients
     ]
+
+
+# 환자 상세 정보 조회 API
+@router.get(
+    "/{patient_id}",
+    response_model=PatientDetailResponse,
+    status_code=status.HTTP_200_OK,
+    summary="환자 정보 상세 조회 API",
+    description=(
+        "환자 고유 ID를 기준으로 환자의 "
+        "상세 정보를 조회합니다."
+    ),
+)
+async def get_patient_detail(
+    patient_id: int = Path(
+        ...,
+        ge=1,
+        description="환자 고유 ID",
+    ),
+    current_user=Depends(
+        require_permissions(
+            allowed_roles=(
+                RoleEnum.STAFF,
+            ),
+        )
+    ),
+    db: AsyncSession = Depends(async_get_db),
+) -> PatientDetailResponse:
+    statement = select(Patient).where(
+        Patient.id == patient_id
+    )
+
+    try:
+        result = await db.execute(statement)
+        patient = result.scalar_one_or_none()
+    except SQLAlchemyError as error:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_500_INTERNAL_SERVER_ERROR
+            ),
+            detail=(
+                "환자 정보 상세 조회 중 "
+                "오류가 발생했습니다."
+            ),
+        ) from error
+
+    if patient is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 환자를 찾을 수 없습니다.",
+        )
+
+    return PatientDetailResponse(
+        name=patient.name,
+        gender=(
+            PatientGender.MALE
+            if patient.gender == GenderEnum.M
+            else PatientGender.FEMALE
+        ),
+        phone_number=patient.phone,
+        age=patient.age,
+    )
