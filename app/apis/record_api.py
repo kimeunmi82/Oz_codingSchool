@@ -7,7 +7,12 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import (
+    IntegrityError,
+    SQLAlchemyError,
+)
 
+from sqlalchemy.orm import load_only, selectinload
 from app.core.timeout import TimeoutRoute
 from app.core.db.databases import async_get_db
 
@@ -16,6 +21,8 @@ from app.schemas.record import (
     MedicalRecordCreateMessage,
     MedicalRecordData,
     XrayImageData,
+    MedicalRecordListItem, 
+    MedicalRecordDetail
 )
 from app.models.medical_records import MedicalRecord
 from app.models.xray_images import XrayImages
@@ -212,3 +219,33 @@ async def get_uploaded_xray_preview(
             detail="xray_image_not_found",
         )
     return FileResponse(file_path)
+# 1. 목록 조회 API [REQ-MDR-002]
+@router.get("/v1/records", response_model=list[MedicalRecordListItem])
+async def get_medical_records(
+    patient_id: int, 
+    db: AsyncSession = Depends(async_get_db),
+    # 의료 부서만 접근 가능하도록 설정
+    current_user = Depends(require_permissions(allowed_departments=(DepartmentEnum.MEDICAL,)))
+):
+    # ... 기존 로직 그대로 유지 ...
+    stmt = select(MedicalRecord).where(MedicalRecord.patient_id == patient_id).order_by(MedicalRecord.created_at.desc())
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+# 2. 상세 조회 API [REQ-MDR-003]
+@router.get("/v1/records/{record_id}", response_model=MedicalRecordDetail)
+async def get_medical_record_detail(
+    record_id: int, 
+    db: AsyncSession = Depends(async_get_db),
+    # 의료 부서만 접근 가능하도록 설정
+    current_user = Depends(require_permissions(allowed_departments=(DepartmentEnum.MEDICAL,)))
+):
+    # ... 기존 로직 그대로 유지 ...
+    stmt = select(MedicalRecord).options(selectinload(MedicalRecord.xray_images)).where(MedicalRecord.id == record_id)
+    result = await db.execute(stmt)
+    record = result.scalar_one_or_none()
+    
+    if not record:
+        raise HTTPException(status_code=404, detail="진료기록을 찾을 수 없습니다.")
+    
+    return record

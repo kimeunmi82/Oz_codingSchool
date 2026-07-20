@@ -58,6 +58,7 @@ async def catch_all(path: str):
     # API나 정적 파일 경로는 제외 (FastAPI가 먼저 매칭하지 못한 경우에만 실행됨)
     if (
         path.startswith("api/v1")
+        or path.startswith("record_api")
         or path.startswith("static/")
         or path.startswith("media/")
     ):
@@ -65,3 +66,6 @@ async def catch_all(path: str):
 
         raise HTTPException(status_code=404)
     return FileResponse(BASE_DIR / "static" / "index.html")
+
+
+

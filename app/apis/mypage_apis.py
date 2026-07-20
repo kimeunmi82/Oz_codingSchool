@@ -1,20 +1,43 @@
-from fastapi import APIRouter, HTTPException, status, Depends
-from app.schemas.mypage import (
-    MyPageResponse, 
-    MyPageUpdateRequest, 
-    PasswordChangeRequest, 
-    PasswordChangeResponse,
-    )
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    status, 
+    Path, 
+    Depends,
+    Response
+)
+
+from fastapi.security import (
+    HTTPAuthorizationCredentials,
+    HTTPBearer
+)
+from pydantic import BaseModel, EmailStr, Field, field_validator, StringConstraints
+
+import re
+from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
+
+from app.schemas.mypage import (
+    MyPageResponse,
+    MyPageUpdateRequest,
+    PasswordChangeRequest,
+    PasswordChangeResponse
+)
+
 from app.core.db.databases import async_get_db
 from app.models.users import User
-from sqlalchemy import select
+from app.apis.auth_apis import decode_jwt
+
 from sqlalchemy.exc import SQLAlchemyError
 from app.core.security import (hash_password_async, verify_password_async,)
 
 from app.apis.auth_apis import get_current_user_id
 from app.core.timeout import TimeoutRoute
 
+from app.core.authorization import require_permissions
+from app.models.users import RoleEnum
 
 #####################################################
 # 1. 라우터 선언
@@ -29,6 +52,57 @@ router = APIRouter(
 # 2. API Endpoints 구현
 #####################################################
 
+# 회원 탈퇴 API
+@router.delete(
+    "/v1/users/me",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="회원 탈퇴 API",
+    description="로그인한 사용자의 계정을 비활성화합니다.",
+)
+async def delete_my_account(
+    response: Response,
+    authenticated_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(async_get_db),
+):
+    statement = select(User).where(
+        User.id == authenticated_user_id
+    )
+    result = await db.execute(statement)
+    current_user = result.scalar_one_or_none()
+
+    if current_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자 정보를 찾을 수 없습니다.",
+        )
+
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 탈퇴한 사용자입니다.",
+        )
+
+    current_user.is_active = False
+
+    try:
+        await db.commit()
+    except SQLAlchemyError as error:
+        await db.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="회원 탈퇴 중 오류가 발생했습니다.",
+        ) from error
+
+    response.delete_cookie(
+        key="refresh_token",
+        path="/",
+    )
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
+
+
+
 # 6. 마이페이지 조회
 @router.get("/v1/users/me", response_model=MyPageResponse)
 async def get_my_page(
@@ -36,6 +110,7 @@ async def get_my_page(
         get_current_user_id
     ),
     db: AsyncSession = Depends(async_get_db),
+    current_user: User = Depends(require_permissions(allowed_roles=(RoleEnum.USER, RoleEnum.ADMIN))),
 ):
     statement = (
         select(User)
