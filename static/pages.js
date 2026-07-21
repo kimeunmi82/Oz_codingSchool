@@ -51,6 +51,14 @@ const pages = {
         const app = document.getElementById('app');
         app.innerHTML = html;
 
+        // 권한이 있을때만 회원등록 버튼 보이도록
+        const createPatientButton = document.getElementById(
+            'create-patient-btn'
+        );
+        if (createPatientButton && canCreatePatient()) {
+            createPatientButton.style.display = '';
+        }
+
         // 필드 값 복원
         const nameInput = document.getElementById('search-name');
         const genderSelect = document.getElementById('filter-gender');
