@@ -301,7 +301,10 @@ const apis = {
      * [REQ-PRED-001] 진료기록에 등록된 X-ray 이미지를 활용하여 폐렴 여부를 예측한다.
      */
     async predictPneumonia(recordId) {
-        return await this.request(`/medical-records/${recordId}/predict`, { method: 'POST' });
+        return await this.request(
+            `/prediction_api/v1/medical-records/${recordId}/predict`,
+            { method: 'POST' }
+        );
     },
 
     /**
@@ -309,7 +312,9 @@ const apis = {
      * [REQ-PRED-002] 특정 진료기록에 대해 수행된 모든 AI 예측 결과 목록을 조회한다.
      */
     async getMedicalRecordAnalyses(recordId) {
-        return await this.request(`/analysis_api/v1/records/${recordId}/analyses`);
+        return await this.request(
+            `/prediction_api/v1/medical-records/${recordId}/analyses`
+        );
     },
 
     // --- Admin ---

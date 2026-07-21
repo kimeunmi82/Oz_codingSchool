@@ -17,7 +17,10 @@
     
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <h3>AI 폐렴 예측 결과</h3>
-        <button id="refresh-analysis-btn" class="secondary">새로고침</button>
+        <div style="display: flex; gap: 0.5rem;">
+            <button id="predict-btn">AI 예측 결과보기</button>
+            <button id="refresh-analysis-btn" class="secondary">새로고침</button>
+        </div>
     </div>
 
     <p id="analysis-empty" hidden>저장된 예측 결과가 없습니다.</p>
@@ -36,6 +39,11 @@
             <tbody id="analysis-list"></tbody>
         </table>
     </div>
+
+    <p class="ai-result-notice">
+        Grad-CAM은 AI 모델이 예측 시 주목한 영역을 표시하며,
+        실제 병변 위치를 확정하는 의료 진단 결과가 아닙니다.
+    </p>
     
     <button id="back-to-patient-btn" class="secondary" style="margin-top: 1rem;">진료 목록으로</button>
 </div>
