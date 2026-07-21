@@ -17,11 +17,24 @@
     
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <h3>AI 폐렴 예측 결과</h3>
-        <button id="predict-btn">AI 예측 결과보기</button>
+        <button id="refresh-analysis-btn" class="secondary">새로고침</button>
     </div>
-    
-    <div id="analysis-list">
-        <!-- JS로 채워짐 -->
+
+    <p id="analysis-empty" hidden>저장된 예측 결과가 없습니다.</p>
+    <div style="overflow-x: auto;">
+        <table id="analysis-table" hidden>
+            <thead>
+                <tr>
+                    <th>고유 ID</th>
+                    <th>폐렴 여부</th>
+                    <th>Confidence</th>
+                    <th>Heatmap Image URL</th>
+                    <th>예측 수행 일시</th>
+                    <th>사용한 모델</th>
+                </tr>
+            </thead>
+            <tbody id="analysis-list"></tbody>
+        </table>
     </div>
     
     <button id="back-to-patient-btn" class="secondary" style="margin-top: 1rem;">진료 목록으로</button>

@@ -4,6 +4,17 @@ const state = {
     currentPage: '/'
 };
 
+function canViewAnalysis(user) {
+    if (!user) return false;
+    if (user.role === 'ADMIN') return true;
+
+    return user.role === 'STAFF' && [
+        'MEDICAL',
+        'DEV',
+        'RESEARCH'
+    ].includes(user.department);
+}
+
 async function login(email, password) {
     const errorEl = document.getElementById('login-error');
     if (errorEl) errorEl.style.display = 'none';
@@ -166,6 +177,12 @@ async function navigate(path, pushState = true) {
                 '접근 제한'
             );
             await navigate('/patients');
+            return;
+        }
+
+        if (pathname.startsWith('/medical-records/') && !canViewAnalysis(state.user)) {
+            utils.showAlert('AI 예측 결과 조회 권한이 없습니다.', 'error', '접근 제한');
+            await navigate('/');
             return;
         }
 
