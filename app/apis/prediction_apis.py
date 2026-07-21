@@ -12,9 +12,6 @@ from app.core.timeout import TimeoutRoute
 from app.core.db.databases import async_get_db
 
 from app.apis.auth_apis import get_current_access_token_payload
-from app.schemas.record import (
-    
-)
 from app.core.authorization import require_permissions
 from app.models.users import DepartmentEnum
 
