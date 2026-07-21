@@ -154,9 +154,11 @@ const pages = {
     },
 
     async renderRecordDetail(recordId) {
-        const record = await apis.getMedicalRecord(recordId);
-        const analyses = await apis.getMedicalRecordAnalyses(recordId);
-        const html = await utils.loadTemplate('record-detail');
+        const [record, analyses, html] = await Promise.all([
+            apis.getMedicalRecord(recordId),
+            apis.getMedicalRecordAnalyses(recordId),
+            utils.loadTemplate('record-detail')
+        ]);
         const app = document.getElementById('app');
         app.innerHTML = html;
         
@@ -165,37 +167,50 @@ const pages = {
         document.getElementById('symptoms-text').innerText = record.symptoms;
         document.getElementById('created-at').innerText = new Date(record.created_at).toLocaleString();
         const xrayImage = record.xray_images?.[0];
-        document.getElementById('xray-img').src = xrayImage?.image_url || '';
+        const xrayElement = document.getElementById('xray-img');
+        if (xrayImage?.image_url) {
+            xrayElement.src = xrayImage.image_url;
+        } else {
+            xrayElement.removeAttribute('src');
+            xrayElement.alt = '등록된 X-Ray 이미지가 없습니다.';
+        }
         
-        document.getElementById('predict-btn').onclick = () => this.handlePredict(recordId);
+        document.getElementById('refresh-analysis-btn').onclick = () => this.renderRecordDetail(recordId);
         document.getElementById('back-to-patient-btn').onclick = () => navigate(`/patients/${record.patient_id}`);
         
         const analysisList = document.getElementById('analysis-list');
+        const analysisTable = document.getElementById('analysis-table');
+        const analysisEmpty = document.getElementById('analysis-empty');
+
         if (analyses.length === 0) {
-            analysisList.innerHTML = '<p>저장된 예측 결과가 없습니다.</p>';
+            analysisEmpty.hidden = false;
         } else {
-            analysisList.innerHTML = `
-                <table>
-                    <thead>
-                        <tr>
-                            <th>수행 일시</th>
-                            <th>폐렴 여부</th>
-                            <th>Confidence</th>
-                            <th>사용 모델</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${analyses.map(a => `
-                            <tr class="${a.is_pneumonia ? 'result-positive' : 'result-negative'}">
-                                <td>${new Date(a.created_at).toLocaleString()}</td>
-                                <td><strong>${a.is_pneumonia ? 'Positive' : 'Negative'}</strong></td>
-                                <td>${a.confidence}%</td>
-                                <td>${a.ai_model}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
+            analysisTable.hidden = false;
+            analyses.forEach((analysis) => {
+                const row = analysisList.insertRow();
+                row.className = analysis.is_pneumonia
+                    ? 'result-positive'
+                    : 'result-negative';
+
+                row.insertCell().textContent = analysis.id;
+                row.insertCell().textContent = analysis.is_pneumonia
+                    ? 'Positive'
+                    : 'Negative';
+                row.insertCell().textContent = `${Number(analysis.confidence).toFixed(2)}%`;
+
+                const heatmapCell = row.insertCell();
+                const heatmapLink = document.createElement('a');
+                heatmapLink.href = analysis.heatmap_url;
+                heatmapLink.target = '_blank';
+                heatmapLink.rel = 'noopener noreferrer';
+                heatmapLink.textContent = analysis.heatmap_url;
+                heatmapCell.appendChild(heatmapLink);
+
+                row.insertCell().textContent = new Date(
+                    analysis.created_at
+                ).toLocaleString();
+                row.insertCell().textContent = analysis.ai_model;
+            });
         }
     },
 
