@@ -19,6 +19,7 @@ import re
 
 # 6번 마이페이지 조회
 class MyPageResponse(BaseModel):
+    id: int
     name: str | None
     email: str | None
     department: DepartmentEnum

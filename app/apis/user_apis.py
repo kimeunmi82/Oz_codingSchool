@@ -139,6 +139,7 @@ async def get_user_list(
             User.phone_number,
             User.gender,
             User.department,
+            User.role,
             User.is_active,
             raiseload=True,
         )

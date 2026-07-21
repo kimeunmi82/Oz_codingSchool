@@ -57,13 +57,13 @@ class MedicalRecordListItem(BaseModel):
 # 상세 조회용 스키마
 class MedicalRecordDetail(BaseModel):
     id: int
+    patient_id: int
     chart_number: str
     symptoms: str
     created_at: datetime
     xray_images: list[XrayImageItem] = [] # 상세 조회 시 이미지 리스트 포함
 
     model_config = ConfigDict(from_attributes=True)
-
 
 
 
