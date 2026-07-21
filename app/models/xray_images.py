@@ -27,10 +27,14 @@ class XrayImages(Base, TimestampMixin):
         nullable=False,
         index=True
     )
-    uploader_id: Mapped[int] = mapped_column(
+    # 회원 탈퇴 시 DB에서 회원 정보 삭제를 위해 수정 (x-ray 정보는 유지)
+    uploader_id: Mapped[int | None] = mapped_column(
         Integer,
-        ForeignKey("users.id"),
-        nullable=False,
+        ForeignKey(
+            "users.id",
+            ondelete='SET NULL',
+        ),
+        nullable=True,
         index=True
     )
     image_url: Mapped[str] = mapped_column(

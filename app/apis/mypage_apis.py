@@ -57,7 +57,7 @@ router = APIRouter(
     "/v1/users/me",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="회원 탈퇴 API",
-    description="로그인한 사용자의 계정을 비활성화합니다.",
+    description="로그인한 사용자의 계정과 관련 정보를 삭제합니다.",
 )
 async def delete_my_account(
     response: Response,
@@ -81,8 +81,8 @@ async def delete_my_account(
             status_code=status.HTTP_409_CONFLICT,
             detail="이미 탈퇴한 사용자입니다.",
         )
-
-    current_user.is_active = False
+    # 회원 탈퇴 수정: 소프트삭제 -> 하드삭제
+    await db.delete(current_user)
 
     try:
         await db.commit()
