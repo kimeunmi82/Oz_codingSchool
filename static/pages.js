@@ -183,6 +183,7 @@ const pages = {
             xrayElement.alt = '등록된 X-Ray 이미지가 없습니다.';
         }
         
+        document.getElementById('predict-btn').onclick = () => this.handlePredict(recordId);
         document.getElementById('refresh-analysis-btn').onclick = () => this.renderRecordDetail(recordId);
         document.getElementById('back-to-patient-btn').onclick = () => navigate(`/patients/${record.patient_id}`);
         
@@ -202,17 +203,35 @@ const pages = {
 
                 row.insertCell().textContent = analysis.id;
                 row.insertCell().textContent = analysis.is_pneumonia
-                    ? 'Positive'
-                    : 'Negative';
+                    ? '폐렴 의심'
+                    : '정상';
                 row.insertCell().textContent = `${Number(analysis.confidence).toFixed(2)}%`;
 
                 const heatmapCell = row.insertCell();
-                const heatmapLink = document.createElement('a');
-                heatmapLink.href = analysis.heatmap_url;
-                heatmapLink.target = '_blank';
-                heatmapLink.rel = 'noopener noreferrer';
-                heatmapLink.textContent = analysis.heatmap_url;
-                heatmapCell.appendChild(heatmapLink);
+                if (analysis.heatmap_url) {
+                    const heatmapResult = document.createElement('div');
+                    heatmapResult.className = 'heatmap-result';
+
+                    const heatmapLink = document.createElement('a');
+                    heatmapLink.href = analysis.heatmap_url;
+                    heatmapLink.target = '_blank';
+                    heatmapLink.rel = 'noopener noreferrer';
+
+                    const heatmapImage = document.createElement('img');
+                    heatmapImage.src = analysis.heatmap_url;
+                    heatmapImage.alt = 'AI Grad-CAM 분석 이미지';
+                    heatmapImage.className = 'heatmap-thumb';
+                    heatmapLink.appendChild(heatmapImage);
+
+                    const heatmapModel = document.createElement('small');
+                    heatmapModel.textContent = analysis.heatmap_model
+                        || '모델 정보 없음';
+
+                    heatmapResult.append(heatmapLink, heatmapModel);
+                    heatmapCell.appendChild(heatmapResult);
+                } else {
+                    heatmapCell.textContent = '히트맵 없음';
+                }
 
                 row.insertCell().textContent = new Date(
                     analysis.created_at

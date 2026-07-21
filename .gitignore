@@ -26,3 +26,7 @@ envs/
 .python-version
 
 .delete-quarantine/
+
+# Runtime-generated medical images
+media/uploads/xray/*
+media/uploads/heatmaps/*

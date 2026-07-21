@@ -383,3 +383,24 @@ footer {
     background-color: #ffdce0;
     color: var(--danger-color);
 }
+
+.heatmap-result {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+}
+
+.heatmap-thumb {
+    width: 160px;
+    height: 160px;
+    object-fit: contain;
+    border-radius: 8px;
+    background-color: #111;
+    border: 1px solid #ddd;
+}
+
+.heatmap-result small {
+    color: #666;
+    overflow-wrap: anywhere;
+}

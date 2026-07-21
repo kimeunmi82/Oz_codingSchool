@@ -59,6 +59,7 @@ def _delete_existing_xray_files(patient_id: int) -> None:
     "/v1/record/{patient_id}",
     response_model=MedicalRecordCreateMessage,
     status_code=status.HTTP_201_CREATED,
+    summary="진료 기록 등록 API"
 )
 async def create_medical_record(
     patient_id: int,
@@ -198,7 +199,8 @@ async def create_medical_record(
     )
 
 # 이미지 미리보기
-@router.get("/v1/record/images/{file_name}")
+@router.get("/v1/record/images/{file_name}",
+            summary="X-ray 이미지 미리보기 API")
 async def get_uploaded_xray_preview(
     file_name: str,
     current_user=Depends(
@@ -216,7 +218,9 @@ async def get_uploaded_xray_preview(
     return FileResponse(file_path)
 
 # 1. 목록 조회 API [REQ-MDR-002]
-@router.get("/v1/records", response_model=list[MedicalRecordListItem])
+@router.get("/v1/records",
+            response_model=list[MedicalRecordListItem],
+            summary="진료 기록 목록 조회")
 async def get_medical_records(
     patient_id: int, 
     db: AsyncSession = Depends(async_get_db),
@@ -236,7 +240,9 @@ async def get_medical_records(
     return result.scalars().all()
 
 # 2. 상세 조회 API [REQ-MDR-003]
-@router.get("/v1/records/{record_id}", response_model=MedicalRecordDetail)
+@router.get("/v1/records/{record_id}",
+            response_model=MedicalRecordDetail,
+            summary="환자 진료 기록 상세 조회")
 async def get_medical_record_detail(
     record_id: int, 
     db: AsyncSession = Depends(async_get_db),

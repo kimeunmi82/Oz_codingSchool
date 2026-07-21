@@ -16,6 +16,7 @@ import io
 import json
 from pathlib import Path
 from typing import BinaryIO
+from uuid import uuid4
 
 import cv2
 import numpy as np
@@ -35,6 +36,7 @@ IMAGE_SIZE = 384
 IMAGENET_MEAN = np.asarray((0.485, 0.456, 0.406), dtype=np.float32)
 IMAGENET_STD = np.asarray((0.229, 0.224, 0.225), dtype=np.float32)
 MAX_IMAGE_PIXELS = 50_000_000
+GRADCAM_MODEL_NAME = "weighted_ensemble_gradcam"
 
 
 class ChannelAttention(nn.Module):
@@ -129,14 +131,23 @@ class PneumoniaClassifier(nn.Module):
             nn.Linear(channels, 1),
         )
 
-    def forward(self, inputs: Tensor) -> Tensor:
+    def extract_features(self, inputs: Tensor) -> Tensor:
+        """Grad-CAM과 분류에서 공통으로 사용하는 마지막 특징 맵을 반환한다."""
+
         outputs = self.features(inputs)
         if self._relu_features:
             outputs = F.relu(outputs, inplace=False)
-        outputs = self.cbam(outputs)
-        outputs = F.adaptive_avg_pool2d(outputs, output_size=1)
+        return self.cbam(outputs)
+
+    def classify_features(self, features: Tensor) -> Tensor:
+        """마지막 특징 맵을 이진 분류 logit으로 변환한다."""
+
+        outputs = F.adaptive_avg_pool2d(features, output_size=1)
         outputs = torch.flatten(outputs, 1)
         return self.classifier(outputs)
+
+    def forward(self, inputs: Tensor) -> Tensor:
+        return self.classify_features(self.extract_features(inputs))
 
 
 def _select_device() -> torch.device:
@@ -236,6 +247,105 @@ class PneumoniaEnsemble(nn.Module):
 
         return float(ensemble_probability.detach().cpu().item())
 
+    def pneumonia_probability_and_gradcam(
+        self,
+        image_tensor: Tensor,
+    ) -> tuple[float, np.ndarray]:
+        """앙상블 확률과 최종 판정 클래스를 설명하는 Grad-CAM을 계산한다.
+
+        각 fold의 마지막 CBAM 특징 맵에서 Grad-CAM을 만든 뒤 같은 백본의
+        5개 지도를 평균하고, 최종 예측에 사용한 백본 가중치로 다시 합친다.
+        특징 추출은 gradient 없이 수행하고 마지막 분류기에 대해서만 gradient를
+        계산해 15개 모델을 사용하는 경우에도 불필요한 메모리 사용을 줄인다.
+        """
+
+        image_tensor = image_tensor.to(self.device)
+        ensemble_probability = torch.zeros((), device=self.device)
+        gradcam_inputs: dict[str, list[tuple[Tensor, Tensor]]] = {}
+
+        for architecture, fold_models in self.models.items():
+            fold_probabilities: list[Tensor] = []
+            fold_inputs: list[tuple[Tensor, Tensor]] = []
+
+            for fold_model in fold_models:
+                # Grad-CAM은 선택한 특징 맵 이후의 gradient만 필요하다. 백본 전체
+                # graph를 보존하지 않아도 되므로 특징 추출 단계는 no_grad로 실행한다.
+                with torch.no_grad():
+                    features = fold_model.extract_features(image_tensor)
+
+                features = features.detach().requires_grad_(True)
+                logit = fold_model.classify_features(features).squeeze()
+                fold_probabilities.append(torch.sigmoid(logit.detach()))
+                fold_inputs.append((features, logit))
+
+            architecture_probability = torch.stack(fold_probabilities).mean()
+            ensemble_probability += (
+                architecture_probability
+                * self.architecture_weights[architecture]
+            )
+            gradcam_inputs[architecture] = fold_inputs
+
+        probability = float(ensemble_probability.detach().cpu().item())
+        explain_pneumonia = probability >= self.threshold
+        ensemble_cam = torch.zeros(
+            (IMAGE_SIZE, IMAGE_SIZE),
+            device=self.device,
+        )
+
+        for architecture, fold_inputs in gradcam_inputs.items():
+            fold_cams: list[Tensor] = []
+
+            for features, logit in fold_inputs:
+                # 이진 분류 logit은 폐렴 점수다. 정상 판정에서는 부호를 뒤집어
+                # 실제로 선택된 NORMAL 클래스의 근거를 시각화한다.
+                target_score = logit if explain_pneumonia else -logit
+                gradients = torch.autograd.grad(
+                    target_score,
+                    features,
+                    retain_graph=False,
+                    create_graph=False,
+                )[0]
+                channel_weights = gradients.mean(
+                    dim=(2, 3),
+                    keepdim=True,
+                )
+                cam = torch.relu(
+                    (channel_weights * features).sum(
+                        dim=1,
+                        keepdim=True,
+                    )
+                )
+                cam = F.interpolate(
+                    cam,
+                    size=(IMAGE_SIZE, IMAGE_SIZE),
+                    mode="bilinear",
+                    align_corners=False,
+                )[0, 0]
+
+                cam_min = cam.min()
+                cam_range = cam.max() - cam_min
+                if float(cam_range.detach().cpu().item()) > 1e-12:
+                    cam = (cam - cam_min) / cam_range
+                else:
+                    cam = torch.zeros_like(cam)
+
+                fold_cams.append(cam.detach())
+
+            architecture_cam = torch.stack(fold_cams).mean(dim=0)
+            ensemble_cam += (
+                architecture_cam
+                * self.architecture_weights[architecture]
+            )
+
+        cam_min = ensemble_cam.min()
+        cam_range = ensemble_cam.max() - cam_min
+        if float(cam_range.detach().cpu().item()) > 1e-12:
+            ensemble_cam = (ensemble_cam - cam_min) / cam_range
+        else:
+            ensemble_cam = torch.zeros_like(ensemble_cam)
+
+        return probability, ensemble_cam.detach().cpu().numpy()
+
 
 ImageInput = str | Path | bytes | bytearray | memoryview | BinaryIO | Image.Image
 
@@ -296,6 +406,87 @@ def _letterbox(image: np.ndarray, size: int) -> np.ndarray:
     return canvas
 
 
+def _render_gradcam_overlay(
+    image: Image.Image,
+    letterboxed_cam: np.ndarray,
+) -> np.ndarray:
+    """384x384 Grad-CAM의 padding을 제거하고 원본 X-ray에 합성한다."""
+
+    grayscale = np.asarray(image, dtype=np.uint8)
+    height, width = grayscale.shape
+    scale = min(IMAGE_SIZE / width, IMAGE_SIZE / height)
+    resized_width = max(1, round(width * scale))
+    resized_height = max(1, round(height * scale))
+    x_offset = (IMAGE_SIZE - resized_width) // 2
+    y_offset = (IMAGE_SIZE - resized_height) // 2
+
+    resized_cam = cv2.resize(
+        letterboxed_cam.astype(np.float32),
+        (IMAGE_SIZE, IMAGE_SIZE),
+        interpolation=cv2.INTER_LINEAR,
+    )
+    unpadded_cam = resized_cam[
+        y_offset : y_offset + resized_height,
+        x_offset : x_offset + resized_width,
+    ]
+    original_size_cam = cv2.resize(
+        unpadded_cam,
+        (width, height),
+        interpolation=cv2.INTER_LINEAR,
+    )
+    original_size_cam = np.clip(original_size_cam, 0.0, 1.0)
+
+    base_image = cv2.cvtColor(grayscale, cv2.COLOR_GRAY2BGR).astype(
+        np.float32
+    )
+    colored_heatmap = cv2.applyColorMap(
+        np.uint8(original_size_cam * 255.0),
+        cv2.COLORMAP_JET,
+    ).astype(np.float32)
+
+    # 활성도가 낮은 영역은 원본을 그대로 유지하고, 높은 영역만 최대 55%로
+    # 색상을 합성해 X-ray 구조와 모델의 관심 영역을 함께 확인할 수 있게 한다.
+    alpha = (original_size_cam * 0.55)[:, :, np.newaxis]
+    overlay = base_image * (1.0 - alpha) + colored_heatmap * alpha
+    return np.clip(overlay, 0, 255).astype(np.uint8)
+
+
+def _save_gradcam_overlay(
+    overlay: np.ndarray,
+    output_path: str | Path,
+) -> None:
+    """히트맵을 임시 파일에 쓴 뒤 원자적으로 최종 경로에 교체한다."""
+
+    resolved_output_path = Path(output_path)
+    suffix = resolved_output_path.suffix.lower()
+    if suffix not in {".jpg", ".jpeg", ".png"}:
+        raise ValueError("Grad-CAM 출력 형식은 jpg, jpeg 또는 png여야 합니다.")
+
+    resolved_output_path.parent.mkdir(parents=True, exist_ok=True)
+    extension = ".jpg" if suffix in {".jpg", ".jpeg"} else ".png"
+    encode_options = (
+        [cv2.IMWRITE_JPEG_QUALITY, 92]
+        if extension == ".jpg"
+        else [cv2.IMWRITE_PNG_COMPRESSION, 3]
+    )
+    encoded, encoded_image = cv2.imencode(
+        extension,
+        overlay,
+        encode_options,
+    )
+    if not encoded:
+        raise OSError("Grad-CAM 이미지 인코딩에 실패했습니다.")
+
+    temporary_path = resolved_output_path.with_name(
+        f".{resolved_output_path.name}.{uuid4().hex}.tmp"
+    )
+    try:
+        temporary_path.write_bytes(encoded_image.tobytes())
+        temporary_path.replace(resolved_output_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+
 def preprocess_image(image: ImageInput) -> Tensor:
     """학습 때 사용한 CLAHE, letterbox 및 ImageNet 정규화를 적용"""
 
@@ -321,17 +512,11 @@ def preprocess_image(image: ImageInput) -> Tensor:
 model = PneumoniaEnsemble()
 
 
-def predict(image: ImageInput) -> dict[str, bool | float | str]:
-    """
-    업로드된 X-ray 이미지의 폐렴 예측 결과를 반환
-    confidence와 pneumonia_probability는 DB의 Numeric(5, 2) 컬럼에 바로
-    저장할 수 있도록 0~100 사이의 백분율로 반환.
-    """
+def _build_prediction_result(
+    probability: float,
+) -> dict[str, bool | float | str]:
+    """폐렴 확률을 API와 DB에서 사용하는 공통 결과 형식으로 변환한다."""
 
-    probability = model.pneumonia_probability(preprocess_image(image))
-
-    # pneumonia_probability는 폐렴 자체의 확률 
-    # confidence는 최종으로 선택된 클래스에 대한 신뢰도(확신도)이므로 정상 판정일 때는 (1 - 확률)을 사용
     is_pneumonia = probability >= model.threshold
     confidence = probability if is_pneumonia else 1.0 - probability
 
@@ -343,6 +528,35 @@ def predict(image: ImageInput) -> dict[str, bool | float | str]:
         "threshold": round(model.threshold * 100.0, 2),
         "ai_model": model.model_name,
     }
+
+
+def predict(image: ImageInput) -> dict[str, bool | float | str]:
+    """
+    업로드된 X-ray 이미지의 폐렴 예측 결과를 반환
+    confidence와 pneumonia_probability는 DB의 Numeric(5, 2) 컬럼에 바로
+    저장할 수 있도록 0~100 사이의 백분율로 반환.
+    """
+
+    probability = model.pneumonia_probability(preprocess_image(image))
+    return _build_prediction_result(probability)
+
+
+def predict_with_gradcam(
+    image: ImageInput,
+    output_path: str | Path,
+) -> dict[str, bool | float | str]:
+    """폐렴 예측과 15개 모델의 weighted ensemble Grad-CAM을 생성한다."""
+
+    opened_image = _open_image(image)
+    probability, gradcam = model.pneumonia_probability_and_gradcam(
+        preprocess_image(opened_image)
+    )
+    overlay = _render_gradcam_overlay(opened_image, gradcam)
+    _save_gradcam_overlay(overlay, output_path)
+
+    result = _build_prediction_result(probability)
+    result["heatmap_model"] = GRADCAM_MODEL_NAME
+    return result
 
 
 predict_pneumonia = predict
