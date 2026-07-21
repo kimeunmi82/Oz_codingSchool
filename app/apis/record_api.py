@@ -22,7 +22,7 @@ from app.schemas.record import (
 from app.models.medical_records import MedicalRecord
 from app.models.xray_images import XrayImages
 from app.core.authorization import require_permissions
-from app.models.users import DepartmentEnum
+from app.models.users import DepartmentEnum, RoleEnum
 
 #####################################################
 # 1. 라우터 선언
@@ -221,7 +221,14 @@ async def get_medical_records(
     patient_id: int, 
     db: AsyncSession = Depends(async_get_db),
     # 의료 부서만 접근 가능하도록 설정
-    current_user = Depends(require_permissions(allowed_departments=(DepartmentEnum.MEDICAL,)))
+    # -> 조건은 "로그인된 사내 개발진, 의료 실무진, 연구진은 환자 상세 정보 페이지 내의 진료기록 목록 세션에서 해당 환자의 진료기록을 목록으로 확인 할 수 있다."입니다.
+    current_user = Depends(
+        require_permissions(
+            allowed_roles=(
+                RoleEnum.STAFF,
+            )
+        )
+    )
 ):
     # ... 기존 로직 그대로 유지 ...
     stmt = select(MedicalRecord).where(MedicalRecord.patient_id == patient_id).order_by(MedicalRecord.created_at.desc())
