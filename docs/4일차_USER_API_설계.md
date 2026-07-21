@@ -810,6 +810,191 @@ except Exception:
 
 ---
 
+# REQ-USER-002 - 로그인 API
+## 1. API 개요
+
+| 항목 | 내용 |
+| --- | --- |
+| API 이름 | 사용자 로그인 API |
+| 설명 | 이메일, 비밀번호를 활용한 로그인 API |
+| 엔드포인트(Endpoint) | `/auth_api/v1/auth/login/` |
+| 메서드(Method) | `POST` |
+| 인증 필요 여부 | N |
+
+---
+
+## 2. 요청(Request)
+
+### Headers
+
+| Key | Value | 설명 |
+| --- | --- | --- |
+| Content-Type | application/json | 요청 타입 |
+|  |  |  |
+|  |  |  |
+
+### 본문 예시
+
+```
+{
+  "email": "example@example.com",
+  "password": "securepassword"
+}
+```
+
+### 본문 필드
+
+| 파라미터명 | 타입 | 필수 ( Y / N ) | 설명 |
+| --- | --- | --- | --- |
+| email | string | Y | 사용자 이메일 |
+| password | string | Y | 사용자 비밀번호 |
+
+### 쿼리 파라미터 (GET 요청시)
+
+| 쿼리 파라미터명 | 타입 | 필수 | 설명 |
+| --- | --- | --- | --- |
+|  |  |  |  |
+|  |  |  |  |
+
+---
+
+## 3. 응답(Response)
+
+### 성공
+
+- 200 OK
+    
+    ```
+    {
+      "access_token": "string",
+      "refresh_token": "string",
+      "user": {
+        "id": 1,
+        "email": "example@example.com",
+        "username": "example"
+      }
+    }
+    ```
+    
+    | 필드명 | 타입 | 설명 |
+    | --- | --- | --- |
+    | access_token | string | JWT 액세스 토큰 |
+    | refresh_token | string | JWT 리프레시 토큰 |
+    | user | object | 사용자 정보 |
+
+### 실패
+
+- 404 Bad Request
+    
+    ```
+    {
+      "detail": "이메일 또는 비밀번호가 일치하지 않습니다."
+    }
+    ```
+    
+    | 필드명 | 타입 | 설명 |
+    | --- | --- | --- |
+    | detail | string | - invalid_email_or_password : 이메일 혹은 비밀번호가 잘못된 경우
+    - empty_fields : 필수 필드 중 하나라도 필드가 비어있는 값인 경우 |
+
+---
+
+### 4. 비고
+
+- 로그인 시 JWT(Json Web Token)를 발급하며, API 인가에 사용합니다.
+- 액세스 토큰 만료주기는 30분입니다.
+- 리프레시 토큰 만료주기는 7일입니다.
+- JWT 페이로드에는 최소 정보인 `user_id`만 저장합니다.
+- 리프레시 토큰은 클라이언트에서 접근할 수 없도록 `HttpOnly` 쿠키로 전달합니다.
+---
+
+# REQ-USER-003 - 로그아웃 API
+## 1. API 개요
+
+| 항목 | 내용 |
+| --- | --- |
+| API 이름 | 사용자 로그아웃 API |
+| 설명 | 로그인 사용자의 세션을 종료하고 로그아웃 처리하는 API |
+| 엔드포인트(Endpoint) | `/auth_api/v1/auth/logout/` |
+| 메서드(Method) | `POST` |
+| 인증 필요 여부 | Y |
+
+---
+
+## 2. 요청(Request)
+
+### Headers
+
+| Key | Value | 설명 |
+| --- | --- | --- |
+| Content-Type | application/json | 요청 타입 |
+| Authorization | Bearer <access_token> | 액세스 토큰 |
+|  |  |  |
+
+### 본문 예시
+
+```
+{}
+```
+
+### 본문 필드
+
+| 파라미터명 | 타입 | 필수 ( Y / N ) | 설명 |
+| --- | --- | --- | --- |
+|  |  |  |  |
+|  |  |  |  |
+
+### 쿼리 파라미터 (GET 요청시)
+
+| 쿼리 파라미터명 | 타입 | 필수 | 설명 |
+| --- | --- | --- | --- |
+|  |  |  |  |
+|  |  |  |  |
+
+---
+
+## 3. 응답(Response)
+
+### 성공
+
+- 200 OK
+    
+    ```
+    {
+      "detail": "로그아웃이 완료되었습니다."
+    }
+    ```
+    
+    | 필드명 | 타입 | 설명 |
+    | --- | --- | --- |
+    | detail | string | 로그아웃 결과 메시지 |
+    |  |  |  |
+    |  |  |  |
+
+### 실패
+
+- 401 Unauthorized
+    
+    ```
+    {
+      "detail": "string"
+    }
+    ```
+    
+    | 필드명 | 타입 | 설명 |
+    | --- | --- | --- |
+    | detail | string | `invalid_token` : 유효하지 않은 토큰, 
+    `expired_token` : 만료된 토큰 |
+
+---
+
+### 4. 비고
+
+- 로그아웃 시 클라이언트는 저장된 액세스 토큰을 제거해야 합니다.
+- 서버는 리프레시 토큰 쿠키를 만료 처리해야 합니다.
+- 로그아웃 이후 사용자는 로그인 페이지로 전환됩니다.
+---
+
 # 데이터베이스 및 구현 권장사항
 
 ## User 모델 제약조건
