@@ -1,4 +1,3 @@
-import secrets
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated
@@ -7,10 +6,6 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import (
-    IntegrityError,
-    SQLAlchemyError,
-)
 
 from sqlalchemy.orm import load_only, selectinload
 from app.core.timeout import TimeoutRoute
@@ -219,6 +214,7 @@ async def get_uploaded_xray_preview(
             detail="xray_image_not_found",
         )
     return FileResponse(file_path)
+
 # 1. 목록 조회 API [REQ-MDR-002]
 @router.get("/v1/records", response_model=list[MedicalRecordListItem])
 async def get_medical_records(
