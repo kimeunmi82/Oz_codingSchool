@@ -105,7 +105,9 @@ const apis = {
                 if (msg.includes(passwordErrorMessage)) {
                     msg = passwordErrorMessage;
                 } else if (response.status >= 500) {
-                    msg = "잠시후 다시 시도해주세요.";
+                    msg = typeof error.detail === 'string'
+                    ? error.detail
+                    :"잠시후 다시 시도해주세요.";
                 }
 
                 const errObj = new Error(msg);

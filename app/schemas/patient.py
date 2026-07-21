@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from typing import Annotated
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -43,7 +44,7 @@ class PatientResponse(BaseModel):
     id: int
     name: str
     age: int
-    gender: PatientGender
+    gender: PatientGender | None
     phone_number: str
     created_at: datetime
     updated_at: datetime | None
@@ -52,6 +53,25 @@ class PatientResponse(BaseModel):
 # 환자 상세 정보 조회 응답
 class PatientDetailResponse(BaseModel):
     name: str
-    gender: PatientGender
+    gender: PatientGender | None
     phone_number: str
     age: int
+
+# 환자 정보 수정
+class PatientUpdateRequest(BaseModel):
+    name: Annotated[
+        str,
+        Field(min_length=1, max_length=30),
+    ]
+    phone_number: Annotated[
+        str,
+        Field(pattern=r"^\d{10,11}$"),
+    ]
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_name(cls, value):
+        if isinstance(value, str):
+            return value.strip()
+
+        return value
