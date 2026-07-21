@@ -1,7 +1,12 @@
 <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2>환자 목록</h2>
-        <button onclick="navigate('/patients/create')">환자 등록</button>
+        <!-- 권한이 있는 회원에게만 환자등록 버튼이 보이도록 수정 -->
+        <button
+            id="create-patient-btn"
+            onclick="navigate('/patients/create')"
+            style="display: none;"
+        >환자 등록</button>
     </div>
     
     <!-- 검색 및 필터 영역 추가 -->
