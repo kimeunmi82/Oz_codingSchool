@@ -70,6 +70,7 @@ class UserListItem(BaseModel):
     phone_number: str | None
     gender: GenderEnum
     department: DepartmentEnum
+    role: RoleEnum
     is_active: bool
 
     model_config = ConfigDict(from_attributes=True)
@@ -78,6 +79,5 @@ class UserListItem(BaseModel):
 #5번 권한 변경
 class UserRoleUpdateRequest(BaseModel):
     role: RoleEnum
-
 
 
