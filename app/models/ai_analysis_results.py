@@ -23,7 +23,7 @@ class AIAnalysisResult(Base, TimestampMixin):
     
     is_pneumonia: Mapped[bool] = mapped_column(Boolean, nullable=False, comment='폐렴 진단 여부')
     confidence: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, comment='AI 예측 확률')
-    heatmap_url: Mapped[str] = mapped_column(String(255), nullable=False, comment='AI 분석 결과 이미지 경로')
+    heatmap_url: Mapped[str] = mapped_column(String(255), nullable=False, comment='AI가 판별한 병변 표시 이미지 url')
     ai_model: Mapped[str] = mapped_column(String(50), nullable=False, comment='AI 예측 모델명')
 
     # 관계 설정
