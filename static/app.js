@@ -129,6 +129,13 @@ function route(event) {
     const path = event.target.getAttribute('href') || event.currentTarget.getAttribute('href');
     navigate(path);
 }
+// 환자 등록 권한 확인 함수 추가
+function canCreatePatient() {
+    return state.user?.role === 'ADMIN' || (
+        state.user?.role === 'STAFF' &&
+        state.user?.department === 'MEDICAL'
+    );
+}
 
 async function navigate(path, pushState = true) {
     if (pushState) {
@@ -160,6 +167,16 @@ async function navigate(path, pushState = true) {
         if (pathname === '/admin/users' && state.user?.role !== 'ADMIN') {
             utils.showAlert('관리자 권한이 필요합니다.', 'error', '접근 제한');
             await navigate('/');
+            return;
+        }
+        // 환자 등록 주소 직접접근 차단
+        if (pathname === '/patients/create' && !canCreatePatient()) {
+            utils.showAlert(
+                '환자 등록은 의료 부서 스태프만 가능합니다.',
+                'error',
+                '접근 제한'
+            );
+            await navigate('/patients');
             return;
         }
 
