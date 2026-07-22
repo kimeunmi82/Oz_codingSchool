@@ -244,6 +244,24 @@ button.secondary {
     background-color: var(--secondary-color);
 }
 
+.predict-progress {
+    display: grid;
+    gap: 0.5rem;
+    margin: 1rem 0;
+    color: #475569;
+    font-size: 0.9rem;
+}
+
+.predict-progress[hidden] {
+    display: none;
+}
+
+.predict-progress progress {
+    width: 100%;
+    height: 0.75rem;
+    accent-color: var(--primary-color);
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
