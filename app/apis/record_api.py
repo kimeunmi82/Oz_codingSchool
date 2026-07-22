@@ -247,7 +247,7 @@ async def get_medical_record_detail(
     record_id: int, 
     db: AsyncSession = Depends(async_get_db),
     # 의료 부서만 접근 가능하도록 설정
-    current_user = Depends(require_permissions(allowed_departments=(DepartmentEnum.MEDICAL,)))
+    current_user = Depends(require_permissions(allowed_departments=(DepartmentEnum.MEDICAL,DepartmentEnum.DEV,DepartmentEnum.RESEARCH)))
 ):
     # ... 기존 로직 그대로 유지 ...
     stmt = select(MedicalRecord).options(selectinload(MedicalRecord.xray_images)).where(MedicalRecord.id == record_id)
