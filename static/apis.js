@@ -272,7 +272,7 @@ const apis = {
      * [REQ-MDR-001] 사내 의료인 역할을 가진 유저만 환자의 진료 기록을 등록할 수 있다.
      */
     async createMedicalRecord(patientId, formData) {
-        return await this.request(`/record_api/v1/record/${patientId}`, {
+        return await this.request(`/record_api/v1/records/${patientId}`, {
             method: 'POST',
             body: formData
         });
