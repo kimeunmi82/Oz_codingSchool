@@ -489,8 +489,19 @@ const pages = {
         }
     },
 
-    openUpdateModal() {
-        document.getElementById('update-modal').classList.add('show');
+    async openUpdateModal() {
+        try {
+            // DB에 저장된 환자 정보를 다시 조회해 수정 폼에 표시
+            const patient = await apis.getPatient(state.currentPatientId);
+
+            document.getElementById('update-name').value = patient.name;
+            document.getElementById('update-phone').value =
+                utils.formatPhoneNumber(patient.phone_number);
+
+            document.getElementById('update-modal').classList.add('show');
+        } catch (err) {
+            utils.showAlert(`환자 정보 조회 실패: ${err.message}`, 'error');
+        }
     },
 
     closeUpdateModal() {
