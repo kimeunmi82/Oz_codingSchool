@@ -547,12 +547,23 @@ const pages = {
     },
 
     async handlePredict(recordId) {
+        const predictButton = document.getElementById('predict-btn');
+        const progressContainer = document.getElementById('predict-progress-container');
+
+        predictButton.disabled = true;
+        predictButton.textContent = '예측 중...';
+        progressContainer.hidden = false;
+
         try {
             await apis.predictPneumonia(recordId);
             utils.showAlert('AI 예측이 완료되었습니다.', 'success');
-            navigate(`/medical-records/${recordId}`, false);
+            await navigate(`/medical-records/${recordId}`, false);
         } catch (err) {
             utils.showAlert(`AI 예측 실패: ${err.message}`, 'error');
+        } finally {
+            predictButton.disabled = false;
+            predictButton.textContent = 'AI 예측 결과보기';
+            progressContainer.hidden = true;
         }
     }
 };
