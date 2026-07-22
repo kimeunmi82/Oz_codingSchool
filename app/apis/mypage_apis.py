@@ -113,8 +113,9 @@ async def get_my_page(
     current_user: User = Depends(
         require_permissions(
             allowed_roles=(
-                RoleEnum.PENDING,
+                RoleEnum.PENDING,  # PENDING 추가
                 RoleEnum.STAFF,
+                RoleEnum.ADMIN,
             ),
         )
     ),
