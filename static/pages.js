@@ -190,7 +190,11 @@ const pages = {
             xrayElement.alt = '등록된 X-Ray 이미지가 없습니다.';
         }
         
-        document.getElementById('predict-btn').onclick = () => this.handlePredict(recordId);
+        const predictButton = document.getElementById('predict-btn');
+        predictButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            pages.handlePredict(recordId);
+        });
         document.getElementById('refresh-analysis-btn').onclick = () => this.renderRecordDetail(recordId);
         document.getElementById('back-to-patient-btn').onclick = () => navigate(`/patients/${record.patient_id}`);
         
@@ -557,9 +561,13 @@ const pages = {
         const predictButton = document.getElementById('predict-btn');
         const progressContainer = document.getElementById('predict-progress-container');
 
-        predictButton.disabled = true;
-        predictButton.textContent = '예측 중...';
-        progressContainer.hidden = false;
+        if (predictButton) {
+            predictButton.disabled = true;
+            predictButton.textContent = '예측 중...';
+        }
+        if (progressContainer) {
+            progressContainer.hidden = false;
+        }
 
         try {
             await apis.predictPneumonia(recordId);
@@ -568,9 +576,13 @@ const pages = {
         } catch (err) {
             utils.showAlert(`AI 예측 실패: ${err.message}`, 'error');
         } finally {
-            predictButton.disabled = false;
-            predictButton.textContent = 'AI 예측 결과보기';
-            progressContainer.hidden = true;
+            if (predictButton) {
+                predictButton.disabled = false;
+                predictButton.textContent = 'AI 예측 결과보기';
+            }
+            if (progressContainer) {
+                progressContainer.hidden = true;
+            }
         }
     }
 };

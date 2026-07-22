@@ -143,7 +143,9 @@ const utils = {
 
     async loadTemplate(name) {
         if (this.templatesCache[name]) return this.templatesCache[name];
-        const response = await fetch(`/static/templates/${name}.html`);
+        const response = await fetch(
+            `/static/templates/${name}.html?v=20260722-2`
+        );
         const html = await response.text();
         this.templatesCache[name] = html;
         return html;
