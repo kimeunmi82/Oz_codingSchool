@@ -64,6 +64,7 @@ async def catch_all(path: str):
         path.startswith("api/v1")
         or path.startswith("record_api")
         or path.startswith("analysis_api")
+        or path.startswith("prediction_api")
         or path.startswith("static/")
         or path.startswith("media/")
     ):
