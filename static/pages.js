@@ -119,7 +119,14 @@ const pages = {
         }
         
         // 버튼 이벤트 바인딩
-        document.getElementById('add-record-btn').onclick = () => navigate(`/patients/${patientId}/medical-records/create`);
+        document.getElementById('add-record-btn').onclick = () => {
+            if (state.user?.department !== 'MEDICAL') {
+                window.alert('권한이 없습니다.');
+                return;
+            }
+
+            navigate(`/patients/${patientId}/medical-records/create`);
+        };
         
         // 상세 페이지 전용 상태 (ID 저장)
         state.currentPatientId = patientId;
