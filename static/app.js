@@ -158,7 +158,7 @@ async function navigate(path, pushState = true) {
             return;
         }
 
-        if (state.user && state.user.role === 'PENDING' && !publicPaths.includes(pathname)) {
+        if (state.user && state.user.role === 'PENDING' && !publicPaths.includes(pathname) && pathname !== '/my-page') {
             utils.showAlert('승인 대기 중인 사용자입니다. 관리자의 승인 이후에 사용가능합니다.', 'error', '접근 제한');
             await navigate('/');
             return;
