@@ -294,6 +294,13 @@ const pages = {
         if (deptSelect && params.department) deptSelect.value = params.department;
 
         const listBody = document.getElementById('admin-users-list');
+        // users.map() 실행 전 부서명 매핑 추가 
+        const departmentNames = {
+            DEV: '개발팀',
+            MEDICAL: '의료진',
+            RESEARCH: '연구진'
+        };
+
         if (users.length === 0) {
             listBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">검색 결과가 없습니다.</td></tr>';
             return;
@@ -303,7 +310,7 @@ const pages = {
                 <td>${u.id}</td>
                 <td>${u.name}</td>
                 <td>${u.email}</td>
-                <td>${u.department}</td>
+                <td>${departmentNames[u.department] ?? u.department}</td>
                 <td>${utils.formatPhoneNumber(u.phone_number)}</td>
                 <td>
                     <select onchange="pages.handleRoleUpdate(${u.id}, this.value)" ${u.id === state.user.id ? 'disabled' : ''}>
