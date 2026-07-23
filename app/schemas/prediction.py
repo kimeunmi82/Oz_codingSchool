@@ -1,6 +1,11 @@
 from datetime import datetime
+from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class ModelKey(str, Enum):
+    MODEL_1 = "model_1"
 
 
 class AIAnalysisData(BaseModel):

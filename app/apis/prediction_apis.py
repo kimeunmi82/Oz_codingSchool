@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.authorization import require_permissions
@@ -11,6 +11,7 @@ from app.models.users import DepartmentEnum, RoleEnum
 from app.schemas.prediction import (
     AIAnalysisData,
     AIPredictionResponse,
+    ModelKey,
 )
 from app.services.prediction_service import (
     MedicalRecordNotFoundError,
@@ -49,6 +50,10 @@ async def predict_pneumonia(
         int,
         Path(ge=1, description="예측할 진료기록 ID"),
     ],
+    model_key: Annotated[
+        ModelKey,
+        Query(description="실행할 폐렴 예측 모델"),
+    ],
     db: AsyncSession = Depends(async_get_db),
     current_user=Depends(
         require_permissions(
@@ -73,6 +78,7 @@ async def predict_pneumonia(
             analysis, cached = await get_or_create_prediction(
                 db=db,
                 record_id=record_id,
+                model_key=model_key.value,
             )
 
     except MedicalRecordNotFoundError as exc:
@@ -89,8 +95,9 @@ async def predict_pneumonia(
 
     except PredictionFailedError as exc:
         logger.exception(
-            "AI 폐렴 예측 모델 실행 실패: record_id=%s",
+            "AI 폐렴 예측 모델 실행 실패: record_id=%s, model_key=%s",
             record_id,
+            model_key.value,
         )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -102,8 +109,9 @@ async def predict_pneumonia(
 
     except TimeoutError as exc:
         logger.warning(
-            "AI 폐렴 예측 제한 시간 초과: record_id=%s",
+            "AI 폐렴 예측 제한 시간 초과: record_id=%s, model_key=%s",
             record_id,
+            model_key.value,
         )
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
@@ -115,8 +123,9 @@ async def predict_pneumonia(
 
     except Exception as exc:
         logger.exception(
-            "AI 폐렴 예측 결과 처리 실패: record_id=%s",
+            "AI 폐렴 예측 결과 처리 실패: record_id=%s, model_key=%s",
             record_id,
+            model_key.value,
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

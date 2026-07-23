@@ -17,7 +17,12 @@
     
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <h3>AI 폐렴 예측 결과</h3>
-        <div style="display: flex; gap: 0.5rem;">
+        <div style="display: flex; gap: 0.8rem;">
+            <select id="filter-model" class="model-filter">
+                <option value="">모델선택</option>
+                <option value="model_1">model_1</option>
+                <option value="model_2">model_2</option>
+            </select>
             <button id="predict-btn" type="button">AI 예측 결과보기</button>
             <button id="refresh-analysis-btn" type="button" class="secondary">새로고침</button>
         </div>

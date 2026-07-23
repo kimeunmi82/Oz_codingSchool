@@ -54,7 +54,7 @@
 | 프론트엔드 예측 호출 | `POST /api/v1/medical-records/{record_id}/predict` 코드 존재 |
 | 프론트엔드 결과 조회 | `GET /api/v1/medical-records/{record_id}/analyses` 코드 존재 |
 | 예측 라우터 | `app/apis/prediction_apis.py`에 엔드포인트 미구현 |
-| 모델 추론 | `worker/model.py`의 `predict()` 구현 완료 |
+| 모델 추론 | `worker/models/model_1/model.py`의 `predict()` 구현 완료 |
 | 모델 파일 | 3개 백본 × 5-fold, 총 15개 체크포인트 |
 | 분석 결과 모델 | `AIAnalysisResult` 정의됨 |
 | Heatmap | 미구현, 요구사항상 선택사항 |
@@ -353,7 +353,7 @@ sequenceDiagram
 2. 진료기록이 없으면 `404`를 반환한다.
 3. 최신 X-ray 메타데이터와 파일이 없으면 `409`를 반환한다.
 4. `(record_id, ai_model)`의 기존 결과가 있으면 `cached=true`로 반환한다.
-5. 결과가 없으면 X-ray 경로를 검증하고 `worker.model.predict()`를 실행한다.
+5. 결과가 없으면 X-ray 경로를 검증하고 `worker.models.model_1.model.predict()`를 실행한다.
 6. 선택적으로 Heatmap을 생성한다.
 7. 분석 결과를 DB 트랜잭션으로 저장한다.
 8. Unique Constraint 충돌 시 rollback 후 먼저 저장된 결과를 조회한다.
@@ -543,7 +543,7 @@ Alembic migration 작업:
 Recall과 Accuracy에는 실제 정답 라벨이 필요하다. 운영 중 사용자가 올린 X-ray에는
 검증된 정답이 없으므로 예측 API 응답만으로 성능을 계산할 수 없다.
 
-따라서 `NFR-PRED`는 공개 API가 아닌 `worker/evaluate.py` 형태의 오프라인 평가
+따라서 `NFR-PRED`는 공개 API가 아닌 `worker/models/model_1/evaluate.py` 형태의 오프라인 평가
 스크립트와 평가 보고서로 검증한다.
 
 ### 9.2 평가 정책

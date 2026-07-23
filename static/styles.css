@@ -196,6 +196,10 @@ select {
     padding-right: 2.5rem;
 }
 
+.model-filter {
+    width: 180px;
+}
+
 label {
     font-weight: 600;
     font-size: 0.9rem;

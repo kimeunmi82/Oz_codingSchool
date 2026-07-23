@@ -27,7 +27,8 @@ from torch.nn import functional as F
 from torchvision.models import convnext_tiny, densenet121, efficientnet_b3
 
 
-MODEL_DIR = Path(__file__).resolve().parent / "models"
+MODEL_DIR = Path(__file__).resolve().parent
+CHECKPOINT_DIR = MODEL_DIR / "checkpoints"
 CONFIG_PATH = MODEL_DIR / "best_oof_ensemble_config.json"
 
 # 학습 당시 사용한 입력 크기와 ImageNet 사전 학습 backbone의 정규화 값
@@ -201,11 +202,12 @@ class PneumoniaEnsemble(nn.Module):
         # 체크포인트를 다시 읽지 않아 반복 예측 시 디스크 I/O가 발생하지 않는다.
         for architecture in self.architecture_weights:
             checkpoint_paths = sorted(
-                MODEL_DIR.glob(f"best_{architecture}_384_fold*.pt")
+                CHECKPOINT_DIR.glob(f"best_{architecture}_384_fold*.pt")
             )
             if not checkpoint_paths:
                 raise FileNotFoundError(
-                    f"{architecture} 체크포인트를 찾을 수 없습니다: {MODEL_DIR}"
+                    f"{architecture} 체크포인트를 찾을 수 없습니다: "
+                    f"{CHECKPOINT_DIR}"
                 )
 
             fold_models = nn.ModuleList()
