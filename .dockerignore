@@ -1,0 +1,62 @@
+# 환경변수 및 비밀정보
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Python 가상환경 및 캐시
+.venv/
+venv/
+**/__pycache__/
+**/*.py[cod]
+**/*.pyo
+**/*.pyd
+
+# Python 도구 및 라이브러리 캐시
+**/.cache/
+**/.mypy_cache/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.tox/
+**/.nox/
+**/.coverage
+**/htmlcov/
+
+# Docker 관련 설정
+Dockerfile*
+**/Dockerfile*
+docker-compose*.yml
+docker-compose*.yaml
+compose*.yml
+compose*.yaml
+.dockerignore
+**/.dockerignore
+
+# 문서
+docs/
+README.md
+README*.md
+
+# IDE 및 OS 설정
+.idea/
+.vscode/
+**/*.iml
+**/.DS_Store
+
+# 버전 관리
+.git
+.gitignore
+.gitattributes
+
+# 테스트, 리포트 및 로컬 실행 데이터
+reports/
+tests/
+**/test_*.py
+**/*_test.py
+worker/evaluate.py
+worker/smoke_test.py
+
+media/
+*.log
+*.sqlite
+*.sqlite3

@@ -110,8 +110,6 @@ const utils = {
     });
 },
 
-    templatesCache: {},
-
     resetPasswordToggles(container = document) {
     const toggleButtons = container.querySelectorAll(
         '.password-toggle'
@@ -139,15 +137,19 @@ const utils = {
             `${fieldName} 보기`
         );
     });
-},
+    },
 
     async loadTemplate(name) {
-        if (this.templatesCache[name]) return this.templatesCache[name];
         const response = await fetch(
-            `/static/templates/${name}.html?v=20260722-2`
+            `/static/templates/${name}.html`,
+            { cache: 'no-store' }
         );
+
+        if (!response.ok) {
+            throw new Error(`템플릿을 불러오지 못했습니다: ${name}`);
+        }
+
         const html = await response.text();
-        this.templatesCache[name] = html;
         return html;
     }
 };

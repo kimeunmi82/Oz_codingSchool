@@ -23,6 +23,22 @@ app = FastAPI()
 
 app.middleware("http")(log_api_performance) #미들웨어 등록 및 API 처리 시간 측정
 
+
+@app.middleware("http")
+async def disable_frontend_cache(request, call_next):
+    """개발 중 정적 파일 변경사항을 브라우저에 즉시 반영합니다."""
+
+    response = await call_next(request)
+    content_type = response.headers.get("content-type", "")
+
+    if request.url.path.startswith("/static/") or content_type.startswith("text/html"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+
+    return response
+
+
 # 라우터 등록
 app.include_router(practice_router)
 app.include_router(user_router)
@@ -72,5 +88,4 @@ async def catch_all(path: str):
 
         raise HTTPException(status_code=404)
     return FileResponse(BASE_DIR / "static" / "index.html")
-
 
