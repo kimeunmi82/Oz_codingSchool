@@ -51,13 +51,13 @@ Accuracy:
 계산할 수 있다.
 
 ```bash
-uv run python worker/evaluate.py
+uv run python -m worker.models.model_1.evaluate
 ```
 
 JSON 결과가 필요하면 다음 옵션을 사용한다.
 
 ```bash
-uv run python worker/evaluate.py --json
+uv run python -m worker.models.model_1.evaluate --json
 ```
 
 스크립트는 Recall과 Accuracy가 모두 기준을 충족하면 종료 코드 `0`, 하나라도

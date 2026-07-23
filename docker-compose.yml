@@ -8,6 +8,7 @@ services:
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
+      TZ: Asia/Seoul
     command:
       [
         "uvicorn",
@@ -38,11 +39,13 @@ services:
 
   mysql:
     image: mysql:8.0
+    command: ["--default-time-zone=+09:00"]
     volumes:
       - mysql_volume:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
+      TZ: Asia/Seoul
     ports:
       - "3307:3306"
     healthcheck:

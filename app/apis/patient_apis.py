@@ -112,7 +112,10 @@ def _restore_quarantined_files(
             parents=True,
             exist_ok=True,
         )
-        quarantined_path.replace(original_path)
+        shutil.move(
+            str(quarantined_path),
+            str(original_path),
+        )
 
 
 def _quarantine_media_files(
@@ -169,7 +172,12 @@ def _quarantine_media_files(
                 exist_ok=True,
             )
 
-            original_path.replace(quarantined_path)
+            # Docker named volume과 bind mount는 서로 다른 파일시스템일 수
+            # 있으므로 os.replace 기반 Path.replace 대신 shutil.move를 사용합니다.
+            shutil.move(
+                str(original_path),
+                str(quarantined_path),
+            )
             moved_files.append(
                 (original_path, quarantined_path)
             )
@@ -555,6 +563,7 @@ async def delete_patient(
                 analysis.heatmap_url
                 for analysis
                 in medical_record.ai_analysis_results
+                if analysis.heatmap_url
             )
 
         # 1. DB 삭제 전에 파일을 공개 media 경로 밖으로 격리합니다.
@@ -575,6 +584,11 @@ async def delete_patient(
         ValueError,
     ) as error:
         await db.rollback()
+
+        logger.exception(
+            "환자 정보 삭제 실패: patient_id=%s",
+            patient_id,
+        )
 
         # DB 삭제가 실패했으므로 격리 파일을 원래 위치로 복구합니다.
         try:

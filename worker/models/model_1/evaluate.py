@@ -27,7 +27,6 @@ from typing import Any
 
 DEFAULT_CONFIG_PATH = (
     Path(__file__).resolve().parent
-    / "models"
     / "best_oof_ensemble_config.json"
 )
 DEFAULT_MIN_RECALL = 0.90

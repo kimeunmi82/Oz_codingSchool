@@ -53,8 +53,8 @@ reports/
 tests/
 **/test_*.py
 **/*_test.py
-worker/evaluate.py
-worker/smoke_test.py
+worker/models/model_1/evaluate.py
+worker/models/model_1/smoke_test.py
 
 media/
 *.log

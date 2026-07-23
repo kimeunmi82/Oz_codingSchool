@@ -558,6 +558,18 @@ const pages = {
     },
 
     async handlePredict(recordId) {
+        const selectedModel = document.getElementById('filter-model')?.value;
+
+        if (!selectedModel) {
+            window.alert('모델을 선택해 주세요');
+            return;
+        }
+
+        if (selectedModel !== 'model_1') {
+            window.alert('지원하지 않는 모델입니다.');
+            return;
+        }
+
         const predictButton = document.getElementById('predict-btn');
         const progressContainer = document.getElementById('predict-progress-container');
 
@@ -570,7 +582,7 @@ const pages = {
         }
 
         try {
-            await apis.predictPneumonia(recordId);
+            await apis.predictPneumonia(recordId, selectedModel);
             utils.showAlert('AI 예측이 완료되었습니다.', 'success');
             await navigate(`/medical-records/${recordId}`, false);
         } catch (err) {

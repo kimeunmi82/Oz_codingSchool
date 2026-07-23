@@ -9,13 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.ai_analysis_results import AIAnalysisResult
 from app.models.medical_records import MedicalRecord
 from app.models.xray_images import XrayImages
-from worker.model import model as ensemble_model
-from worker.model import predict_with_gradcam
+from worker.predictors.registry import get_predictor
 
 
 MEDIA_ROOT = Path(__file__).resolve().parents[2] / "media"
 HEATMAP_DIR = MEDIA_ROOT / "uploads" / "heatmaps"
-AI_MODEL_NAME = ensemble_model.model_name
 
 
 class MedicalRecordNotFoundError(Exception):
@@ -45,13 +43,14 @@ async def _find_medical_record(
 async def _find_existing_prediction(
     db: AsyncSession,
     record_id: int,
+    ai_model: str,
 ) -> AIAnalysisResult | None:
     """동일 진료기록과 동일 모델의 기존 결과를 조회한다."""
 
     result = await db.execute(
         select(AIAnalysisResult).where(
             AIAnalysisResult.record_id == record_id,
-            AIAnalysisResult.ai_model == AI_MODEL_NAME,
+            AIAnalysisResult.ai_model == ai_model,
         )
     )
     return result.scalar_one_or_none()
@@ -111,22 +110,27 @@ def _has_available_heatmap(analysis: AIAnalysisResult) -> bool:
     return True
 
 
-def _heatmap_destination(record_id: int) -> tuple[Path, str]:
-    """모델 버전과 진료기록별로 재사용 가능한 히트맵 경로를 만든다."""
+def _heatmap_destination(
+    record_id: int,
+    model_key: str,
+    ai_model: str,
+) -> tuple[Path, str]:
+    """모델별 디렉터리에 재사용 가능한 히트맵 경로를 만든다."""
 
     model_hash = hashlib.sha256(
-        AI_MODEL_NAME.encode("utf-8")
+        ai_model.encode("utf-8")
     ).hexdigest()[:12]
     file_name = f"record_{record_id}_{model_hash}.jpg"
     return (
-        HEATMAP_DIR / file_name,
-        f"/media/uploads/heatmaps/{file_name}",
+        HEATMAP_DIR / model_key / file_name,
+        f"/media/uploads/heatmaps/{model_key}/{file_name}",
     )
 
 
 async def get_or_create_prediction(
     db: AsyncSession,
     record_id: int,
+    model_key: str,
 ) -> tuple[AIAnalysisResult, bool]:
     """
     기존 예측 결과가 있으면 반환하고,
@@ -141,10 +145,13 @@ async def get_or_create_prediction(
     if medical_record is None:
         raise MedicalRecordNotFoundError
 
+    predictor = get_predictor(model_key)
+
     # 모델을 실행하기 전에 기존 저장 결과를 먼저 확인한다.
     existing_prediction = await _find_existing_prediction(
         db,
         record_id,
+        predictor.ai_model,
     )
 
     if (
@@ -163,13 +170,17 @@ async def get_or_create_prediction(
     # 긴 모델 추론 동안 DB 연결을 점유하지 않도록 읽기 트랜잭션을 종료한다.
     await db.rollback()
 
-    heatmap_path, heatmap_url = _heatmap_destination(record_id)
+    heatmap_path, heatmap_url = _heatmap_destination(
+        record_id,
+        predictor.model_key,
+        predictor.ai_model,
+    )
 
     try:
         # 예측과 weighted ensemble Grad-CAM은 동기 CPU/GPU 작업이므로
         # FastAPI 이벤트 루프를 막지 않게 별도 worker thread에서 실행한다.
         prediction_result = await asyncio.to_thread(
-            predict_with_gradcam,
+            predictor.predict,
             image_path,
             heatmap_path,
         )
@@ -180,9 +191,7 @@ async def get_or_create_prediction(
     # 동일한 행을 보완한다. 기존 데이터의 생성 시각과 예측값도 유지한다.
     if existing_prediction is not None:
         existing_prediction.heatmap_url = heatmap_url
-        existing_prediction.heatmap_model = str(
-            prediction_result["heatmap_model"]
-        )
+        existing_prediction.heatmap_model = prediction_result.heatmap_model
 
         try:
             await db.commit()
@@ -194,11 +203,11 @@ async def get_or_create_prediction(
 
     analysis = AIAnalysisResult(
         record_id=record_id,
-        is_pneumonia=prediction_result["is_pneumonia"],
-        confidence=prediction_result["confidence"],
+        is_pneumonia=prediction_result.is_pneumonia,
+        confidence=prediction_result.confidence,
         heatmap_url=heatmap_url,
-        heatmap_model=prediction_result["heatmap_model"],
-        ai_model=prediction_result["ai_model"],
+        heatmap_model=prediction_result.heatmap_model,
+        ai_model=prediction_result.ai_model,
     )
 
     db.add(analysis)
@@ -216,6 +225,7 @@ async def get_or_create_prediction(
         existing_prediction = await _find_existing_prediction(
             db,
             record_id,
+            predictor.ai_model,
         )
 
         if existing_prediction is not None:

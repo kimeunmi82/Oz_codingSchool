@@ -1,8 +1,8 @@
 """앙상블 모델 설치와 전체 추론 경로를 빠르게 확인하는 스모크 테스트.
 
 실행 방법:
-    uv run python -m worker.smoke_test
-    uv run python -m worker.smoke_test path/to/xray.jpg
+    uv run python -m worker.models.model_1.smoke_test
+    uv run python -m worker.models.model_1.smoke_test path/to/xray.jpg
 
 이미지를 생략하면 의학적 의미가 없는 임시 회색조 이미지로 코드 실행 여부만
 확인한다. 실제 모델 품질 검증에는 정상/폐렴 X-ray 이미지를 각각 사용해야 한다.
@@ -16,7 +16,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from worker.model import model, predict
+from worker.models.model_1.model import model, predict
 
 
 EXPECTED_MODEL_COUNT = 15
